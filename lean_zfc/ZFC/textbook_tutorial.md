@@ -836,16 +836,143 @@ theorem exercise_2_1_18_a(A B : ZFSet) : A = B ↔ ZFSet.powerset A = ZFSet.powe
 
 ## 常用技巧总结
 
-### 1. `.mp` 和 `.mpr`
+### 1. `.mp` 和 `.mpr` - 等价关系的方向转换
 
-- `.mp`：从左到右使用等价关系（`P ↔ Q` 中的 `P → Q`）
-- `.mpr`：从右到左使用等价关系（`P ↔ Q` 中的 `Q → P`）
+#### 1.1 基本概念
 
-**示例：**
+在 Lean 中，当有一个等价关系 `P ↔ Q`（双条件）时，我们可以使用 `.mp` 和 `.mpr` 来提取不同方向的蕴含：
+
+- **`.mp`**：**M**odus **P**onens，从左到右使用等价关系
+  - 如果 `h : P ↔ Q`，则 `h.mp : P → Q`
+  - 含义：从 `P` 推出 `Q`
+
+- **`.mpr`**：**M**odus **P**onens **R**everse，从右到左使用等价关系
+  - 如果 `h : P ↔ Q`，则 `h.mpr : Q → P`
+  - 含义：从 `Q` 推出 `P`
+
+**记忆技巧：**
+- `.mp` = "正向"（从左到右）
+- `.mpr` = "反向"（从右到左）
+
+#### 1.2 `ZFSet.mem_union.mpr` 详解
+
+**类型签名：**
 ```lean
+ZFSet.mem_union : x ∈ A ∪ B ↔ x ∈ A ∨ x ∈ B
+
+ZFSet.mem_union.mp   : x ∈ A ∪ B → x ∈ A ∨ x ∈ B  -- 从并集成员关系推出析取
+ZFSet.mem_union.mpr  : x ∈ A ∨ x ∈ B → x ∈ A ∪ B  -- 从析取推出并集成员关系
+```
+
+**详细说明：**
+
+`ZFSet.mem_union` 是一个等价关系，表示：
+- `x ∈ A ∪ B`（x 是 A 和 B 的并集的成员）
+- 当且仅当
+- `x ∈ A ∨ x ∈ B`（x 属于 A 或 x 属于 B）
+
+**`ZFSet.mem_union.mpr` 的作用：**
+
+`ZFSet.mem_union.mpr` 将析取（`∨`）转换为并集成员关系（`∈ A ∪ B`）。
+
+**使用场景：**
+
+当我们需要证明 `x ∈ A ∪ B` 时，通常的步骤是：
+
+1. **构造析取**：先证明 `x ∈ A ∨ x ∈ B`
+   - 如果 `hx : x ∈ A`，用 `Or.inl hx` 构造 `x ∈ A ∨ x ∈ B`
+   - 如果 `hx : x ∈ B`，用 `Or.inr hx` 构造 `x ∈ A ∨ x ∈ B`
+
+2. **转换为并集**：使用 `ZFSet.mem_union.mpr` 将析取转换为并集成员关系
+   - `ZFSet.mem_union.mpr (Or.inl hx)` 或
+   - `ZFSet.mem_union.mpr (Or.inr hx)`
+
+**完整示例：**
+
+```lean
+theorem example_union_left (A B x : ZFSet) : x ∈ A → x ∈ A ∪ B := by
+  intro hx  -- hx : x ∈ A
+  -- 步骤 1：构造析取 x ∈ A ∨ x ∈ B
+  have h_or : x ∈ A ∨ x ∈ B := Or.inl hx  -- 用 Or.inl 选择左分支
+  -- 步骤 2：转换为并集成员关系
+  exact ZFSet.mem_union.mpr h_or
+  -- 或者直接写成：
+  -- exact ZFSet.mem_union.mpr (Or.inl hx)
+```
+
+**常见模式：**
+
+```lean
+-- 模式 1：x ∈ A → x ∈ A ∪ B
+exact ZFSet.mem_union.mpr (Or.inl hx)  -- hx : x ∈ A
+
+-- 模式 2：x ∈ B → x ∈ A ∪ B
+exact ZFSet.mem_union.mpr (Or.inr hx)  -- hx : x ∈ B
+
+-- 模式 3：在分情况讨论中使用
+cases h with
+| inl hx => exact ZFSet.mem_union.mpr (Or.inl hx)  -- 情况1：x ∈ A
+| inr hx => exact ZFSet.mem_union.mpr (Or.inr hx)  -- 情况2：x ∈ B
+```
+
+**`ZFSet.mem_union.mp` 的作用（反向）：**
+
+`ZFSet.mem_union.mp` 将并集成员关系转换为析取：
+
+```lean
+theorem example_union_mp (A B x : ZFSet) : x ∈ A ∪ B → (x ∈ A ∨ x ∈ B) := by
+  intro h  -- h : x ∈ A ∪ B
+  exact ZFSet.mem_union.mp h  -- 转换为 x ∈ A ∨ x ∈ B
+```
+
+**其他集合运算的类似用法：**
+
+```lean
+-- 交集
 ZFSet.mem_inter.mp   -- x ∈ A ∩ B → x ∈ A ∧ x ∈ B
 ZFSet.mem_inter.mpr  -- x ∈ A ∧ x ∈ B → x ∈ A ∩ B
+
+-- 差集（使用自定义的 mem_diff）
+(mem_diff A B x).mp   -- x ∈ A - B → x ∈ A ∧ x ∉ B
+(mem_diff A B x).mpr  -- x ∈ A ∧ x ∉ B → x ∈ A - B
+
+-- 幂集
+ZFSet.mem_powerset.mp   -- x ∈ 𝒫(A) → x ⊆ A
+ZFSet.mem_powerset.mpr  -- x ⊆ A → x ∈ 𝒫(A)
 ```
+
+**关键理解：**
+
+1. **`.mpr` 用于"构造"**：当我们有析取（`x ∈ A ∨ x ∈ B`）时，用 `.mpr` 转换为并集成员关系（`x ∈ A ∪ B`）
+
+2. **`.mp` 用于"分解"**：当我们有并集成员关系（`x ∈ A ∪ B`）时，用 `.mp` 转换为析取（`x ∈ A ∨ x ∈ B`）
+
+3. **配合 `Or.inl` 和 `Or.inr` 使用**：
+   - 先构造析取：`Or.inl hx` 或 `Or.inr hx`
+   - 再转换为并集：`ZFSet.mem_union.mpr (Or.inl hx)`
+
+**实际应用示例（并集交换律）：**
+
+```lean
+theorem thm_2_2_1_i (A B x : ZFSet) : x ∈ A ∪ B → x ∈ B ∪ A := by
+  intro h  -- h : x ∈ A ∪ B
+  rw [ZFSet.mem_union] at h  -- h : x ∈ A ∨ x ∈ B
+  cases h with
+  | inl hx =>  -- hx : x ∈ A
+    -- 目标：x ∈ B ∪ A，即 x ∈ B ∨ x ∈ A
+    -- 我们有 hx : x ∈ A，这是 x ∈ B ∨ x ∈ A 的右分支
+    exact ZFSet.mem_union.mpr (Or.inr hx)  -- 用 .mpr 转换为并集
+  | inr hx =>  -- hx : x ∈ B
+    -- 目标：x ∈ B ∪ A，即 x ∈ B ∨ x ∈ A
+    -- 我们有 hx : x ∈ B，这是 x ∈ B ∨ x ∈ A 的左分支
+    exact ZFSet.mem_union.mpr (Or.inl hx)  -- 用 .mpr 转换为并集
+```
+
+**总结：**
+
+- `ZFSet.mem_union.mpr` 是证明 `x ∈ A ∪ B` 的关键工具
+- 它需要配合 `Or.inl` 或 `Or.inr` 使用
+- 记住：先构造析取，再用 `.mpr` 转换为并集成员关系
 
 ### 2. `.left` 和 `.right`
 
