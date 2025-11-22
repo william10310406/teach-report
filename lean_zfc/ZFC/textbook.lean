@@ -25,7 +25,7 @@ theorem theorem_2_1_1_c(A B C : ZFSet) : (A ⊆ B ∧ B ⊆ C) → A ⊆ C := by
   exact hxC
 
 --Theorem 2.1.2 If A and B are sets with no elements, A = B
-theorem thm2_1_2 (A B : ZFSet) : (A = ∅ ∧ B = ∅) → A = B := by
+theorem theorem_2_1_2 (A B : ZFSet) : (A = ∅ ∧ B = ∅) → A = B := by
   intro h --h: A = ∅ ∧ B = ∅
   rcases h with ⟨ hA, hB ⟩ --hA: A = ∅, hB: B = ∅
   -- 使用 calc 進行鏈式等式證明：A = ∅ = B
@@ -34,7 +34,7 @@ theorem thm2_1_2 (A B : ZFSet) : (A = ∅ ∧ B = ∅) → A = B := by
     _ = B := hB.symm  -- hB : B = ∅，所以 hB.symm : ∅ = B
 
 --Theorem 2.1.3 For any sets A and B, A ⊆ B and A ≠ ∅ → B ≠ ∅
-theorem thm2_1_3(A B : ZFSet) : (A ⊆ B ∧ A ≠ ∅) → B ≠ ∅ := by
+theorem theorem_2_1_3(A B : ZFSet) : (A ⊆ B ∧ A ≠ ∅) → B ≠ ∅ := by
   -- 引入前提條件
   intro h --h: A ⊆ B ∧ A ≠ ∅
   -- 分解合取命題：hxAB: A ⊆ B, hA_nonempty: A ≠ ∅
@@ -69,7 +69,7 @@ theorem thm2_1_3(A B : ZFSet) : (A ⊆ B ∧ A ≠ ∅) → B ≠ ∅ := by
 
 --Theorem 2.1.5 Let A and B be sets. Then A ⊆ B ↔ 𝒫(A) ⊆ 𝒫(B)
 -- 其中 𝒫(A) 表示 A 的冪集合（所有 A 的子集合組成的集合）
-theorem thm2_1_5(A B : ZFSet) : A ⊆ B ↔ ZFSet.powerset A ⊆ ZFSet.powerset B := by
+theorem theorem_2_1_5(A B : ZFSet) : A ⊆ B ↔ ZFSet.powerset A ⊆ ZFSet.powerset B := by
   constructor
   -- 方向 1：A ⊆ B → 𝒫(A) ⊆ 𝒫(B)
   · intro h x hx --h : A ⊆ B, hx : x ∈ 𝒫(A)，即 x ∈ ZFSet.powerset A
@@ -407,3 +407,67 @@ theorem thm_2_2_1_i (A B : ZFSet) : A ∪ B = B ∪ A := by
       -- 我們有 hx : x ∈ A，要構造 x ∈ A ∨ x ∈ B
       -- 因為 x ∈ A 是 x ∈ A ∨ x ∈ B 的左分支，所以用 Or.inl hx
       -- 然後用 ZFSet.mem_union.mpr 將 x ∈ A ∨ x ∈ B 轉換為 x ∈ A ∪ B
+
+-- Theorem 2.2.1 (j) A ∩ B = B ∩ A
+theorem theorem_2_2_1_j (A B : ZFSet) : A ∩ B = B ∩ A := by
+  apply ZFSet.ext -- 根據外延性公設 A ∩ B = B ∩ A ↔ ∀ x, x ∈ A ∩ B ↔ x ∈ B ∩ A
+  intro x -- x : any arbitrary element
+  constructor -- 將 ↔ 分成兩個方向
+  · intro hx_inter -- hx_inter : x ∈ A ∩ B
+    -- x ∈ A ∩ B → x ∈ B ∩ A
+    rw [ZFSet.mem_inter] at hx_inter -- 將 x ∈ A ∩ B 拆成 x ∈ A ∧ x ∈ B
+    exact ZFSet.mem_inter.mpr ⟨hx_inter.right, hx_inter.left⟩ -- 交換 x ∈ A 和 x ∈ B 的位置
+  · intro hx_inter -- hx_inter : x ∈ B ∩ A
+    -- x ∈ B ∩ A → x ∈ A ∩ B
+    rw [ZFSet.mem_inter] at hx_inter -- 將 x ∈ B ∩ A 拆成 x ∈ B ∧ x ∈ A
+    exact ZFSet.mem_inter.mpr ⟨hx_inter.right, hx_inter.left⟩ -- 交換 x ∈ B 和 x ∈ A 的位置
+
+-- Theorem 2.2.1 (k) A ∪ (B ∪ C) = (A ∪ B) ∪ C
+theorem theorem_2_2_1_k (A B C : ZFSet) : A ∪ (B ∪ C) = (A ∪ B) ∪ C := by
+  apply ZFSet.ext -- 根據外延性公設 A ∪ (B ∪ C) = (A ∪ B) ∪ C ↔ ∀ x, x ∈ A ∪ (B ∪ C) ↔ x ∈ (A ∪ B) ∪ C
+  intro x -- x : any arbitrary element
+  constructor -- 將 ↔ 分成兩個方向
+  · intro hx_union -- hx_union: x ∈ A ∪ (B ∪ C)
+    rw [ZFSet.mem_union] at hx_union -- 將 x ∈ A ∪ (B ∪ C) 拆成 x ∈ A ∨ x ∈ B ∪ C
+    cases hx_union with
+    | inl hx => -- hx: x ∈ A
+      have h1 : x ∈ A ∪ B := ZFSet.mem_union.mpr (Or.inl hx) -- x ∈ A, so x ∈ A ∪ B
+      exact ZFSet.mem_union.mpr (Or.inl h1) -- x ∈ A ∪ B, so x ∈ (A ∪ B) ∪ C
+    | inr hx => -- hx: x ∈ B ∪ C
+      rw [ZFSet.mem_union] at hx -- 將 x ∈ B ∪ C 拆成 x ∈ B ∨ x ∈ C
+      cases hx with
+      | inl hx_B => -- hx_B: x ∈ B
+        have h1 : x ∈ A ∪ B := ZFSet.mem_union.mpr (Or.inr hx_B) -- x ∈ B, so x ∈ A ∪ B
+        exact ZFSet.mem_union.mpr (Or.inl h1) -- x ∈ A ∪ B, so x ∈ (A ∪ B) ∪ C
+      | inr hx_C => exact ZFSet.mem_union.mpr (Or.inr hx_C) -- x ∈ C, so x ∈ (A ∪ B) ∪ C
+  · intro hx_union -- hx_union: x ∈ (A ∪ B) ∪ C
+    rw [ZFSet.mem_union] at hx_union -- 將 x ∈ (A ∪ B) ∪ C 拆成 x ∈ A ∪ B ∨ x ∈ C
+    cases hx_union with
+    | inl hx => -- hx: x ∈ A ∪ B
+      rw [ZFSet.mem_union] at hx -- 將 x ∈ A ∪ B 拆成 x ∈ A ∨ x ∈ B
+      cases hx with
+      | inl hx_A => exact ZFSet.mem_union.mpr (Or.inl hx_A) -- x ∈ A, so x ∈ A ∪ (B ∪ C)
+      | inr hx_B => -- hx_B: x ∈ B
+        have h1 : x ∈ B ∪ C := ZFSet.mem_union.mpr (Or.inl hx_B) -- x ∈ B, so x ∈ B ∪ C
+        exact ZFSet.mem_union.mpr (Or.inr h1) -- x ∈ B ∪ C, so x ∈ A ∪ (B ∪ C)
+    | inr hx => -- hx: x ∈ C
+      have h1 : x ∈ B ∪ C := ZFSet.mem_union.mpr (Or.inr hx) -- x ∈ C, so x ∈ B ∪ C
+      exact ZFSet.mem_union.mpr (Or.inr h1) -- x ∈ B ∪ C, so x ∈ A ∪ (B ∪ C)
+
+-- Theorem 2.2.1 (l) A ∩ (B ∩ C) = (A ∩ B) ∩ C
+theorem theorem_2_2_1_l (A B C : ZFSet) : A ∩ (B ∩ C) = (A ∩ B) ∩ C := by
+  apply ZFSet.ext -- 根據外延性公設 A ∩ (B ∩ C) = (A ∩ B) ∩ C ↔ ∀ x, x ∈ A ∩ (B ∩ C) ↔ x ∈ (A ∩ B) ∩ C
+  intro x -- x : any arbitrary element
+  constructor -- 將 ↔ 分成兩個部分
+  · intro hx_inter -- hx_inter : x ∈ A ∩ (B ∩ C)
+    -- x ∈ A ∩ (B ∩ C) → x ∈ (A ∩ B) ∩ C
+    have h1 : x ∈ A ∧ x ∈ B ∩ C := ZFSet.mem_inter.mp hx_inter -- 將 x ∈ A ∩ (B ∩ C) 拆成 x ∈ A ∧ x ∈ B ∩ C
+    have h2_pair : x ∈ B ∧ x ∈ C := ZFSet.mem_inter.mp h1.right -- 將 x ∈ B ∩ C 拆成 x ∈ B ∧ x ∈ C
+    have h3 : x ∈ A ∩ B := ZFSet.mem_inter.mpr ⟨h1.left, h2_pair.left⟩ -- x ∈ A ∧ x ∈ B, so x ∈ A ∩ B
+    exact ZFSet.mem_inter.mpr ⟨h3, h2_pair.right⟩ -- x ∈ A ∩ B ∧ x ∈ C, so x ∈ (A ∩ B) ∩ C
+  · intro hx_inter -- hx_inter : x ∈ (A ∩ B) ∩ C
+    -- x ∈ (A ∩ B) ∩ C → x ∈ A ∩ (B ∩ C)
+    have h1 : x ∈ A ∩ B ∧ x ∈ C := ZFSet.mem_inter.mp hx_inter -- 將 x ∈ (A ∩ B) ∩ C 拆成 x ∈ A ∩ B ∧ x ∈ C
+    have h2_pair : x ∈ A ∧ x ∈ B := ZFSet.mem_inter.mp h1.left -- 將 x ∈ A ∩ B 拆成 x ∈ A ∧ x ∈ B
+    have h3 : x ∈ B ∩ C := ZFSet.mem_inter.mpr ⟨h2_pair.right, h1.right⟩ -- x ∈ B ∧ x ∈ C, so x ∈ B ∩ C
+    exact ZFSet.mem_inter.mpr ⟨h2_pair.left, h3⟩ -- x ∈ A ∧ x ∈ B ∩ C, so x ∈ A ∩ (B ∩ C)
