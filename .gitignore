@@ -1,0 +1,8 @@
+/.lake
+# macOS 系统文件
+.DS_Store
+._*
+# Lean 编译文件
+*.olean
+*.c
+build/

@@ -1,0 +1,47 @@
+# Cursor config for Lean + mathlib (ZFC ready)
+
+version: 1
+
+tasks:
+  # 初始化 Lean 專案
+  - name: setup-lean
+    init: |
+      lake init lean_zfc
+      cd lean_zfc
+      lake exe cache get
+
+  # 安裝 mathlib
+  - name: install-mathlib
+    init: |
+      cd lean_zfc
+      lake exe cache get
+      echo '
+      name = "lean_zfc"
+      version = "0.1"
+      defaultTargets = ["lean_zfc"]
+
+      require mathlib from git
+        "https://github.com/leanprover-community/mathlib4" @ "master"
+      ' > lakefile.lean
+      lake update
+
+  # 建立 ZFC 測試檔案
+  - name: create-zfc-test
+    init: |
+      mkdir -p lean_zfc/ZFC
+      echo '
+      import Mathlib.SetTheory.ZFC.Basic
+
+      open SetTheory
+
+      def example1 : Prop :=
+        Set.zero ∈ Set.succ Set.zero
+
+      example : example1 := by
+        change Set.zero ∈ (Set.zero ∪ {Set.zero})
+        right
+        apply Set.mem_singleton
+      ' > lean_zfc/ZFC/Test.lean
+
+workspace:
+  root: lean_zfc
