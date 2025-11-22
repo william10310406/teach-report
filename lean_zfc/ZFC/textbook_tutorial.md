@@ -974,6 +974,145 @@ theorem thm_2_2_1_i (A B x : ZFSet) : x ∈ A ∪ B → x ∈ B ∪ A := by
 - 它需要配合 `Or.inl` 或 `Or.inr` 使用
 - 記住：先構造析取，再用 `.mpr` 轉換為聯集成員關係
 
+#### 1.3 `ZFSet.mem_inter` 詳解
+
+**類型簽名：**
+```lean
+ZFSet.mem_inter : x ∈ A ∩ B ↔ x ∈ A ∧ x ∈ B
+
+ZFSet.mem_inter.mp   : x ∈ A ∩ B → x ∈ A ∧ x ∈ B  -- 從交集成員關係推出合取
+ZFSet.mem_inter.mpr  : x ∈ A ∧ x ∈ B → x ∈ A ∩ B  -- 從合取推出交集成員關係
+```
+
+**詳細說明：**
+
+`ZFSet.mem_inter` 是一個等價關係，表示：
+- `x ∈ A ∩ B`（x 是 A 和 B 的交集的成員）
+- 當且僅當
+- `x ∈ A ∧ x ∈ B`（x 屬於 A 且 x 屬於 B）
+
+**`ZFSet.mem_inter.mp` 的作用：**
+
+`ZFSet.mem_inter.mp` 將交集成員關係（`∈ A ∩ B`）轉換為合取（`∧`）。
+
+**使用場景：**
+
+當我們有 `h : x ∈ A ∩ B` 時，可以使用 `ZFSet.mem_inter.mp` 將其分解為合取：
+
+```lean
+have h_pair : x ∈ A ∧ x ∈ B := ZFSet.mem_inter.mp h
+-- 現在可以使用 h_pair.left : x ∈ A 和 h_pair.right : x ∈ B
+```
+
+**完整範例 1：從交集推出單個集合的成員關係**
+
+```lean
+theorem example_inter_left (A B x : ZFSet) : x ∈ A ∩ B → x ∈ A := by
+  intro h  -- h : x ∈ A ∩ B
+  -- 步驟 1：將交集成員關係轉換為合取
+  have h_pair : x ∈ A ∧ x ∈ B := ZFSet.mem_inter.mp h
+  -- 步驟 2：從合取中取出左部分
+  exact h_pair.left  -- h_pair.left : x ∈ A
+```
+
+**完整範例 2：從交集推出右邊集合的成員關係**
+
+```lean
+theorem example_inter_right (A B x : ZFSet) : x ∈ A ∩ B → x ∈ B := by
+  intro h  -- h : x ∈ A ∩ B
+  have h_pair : x ∈ A ∧ x ∈ B := ZFSet.mem_inter.mp h
+  exact h_pair.right  -- h_pair.right : x ∈ B
+```
+
+**`ZFSet.mem_inter.mpr` 的作用：**
+
+`ZFSet.mem_inter.mpr` 將合取（`∧`）轉換為交集成員關係（`∈ A ∩ B`）。
+
+**使用場景：**
+
+當我們需要證明 `x ∈ A ∩ B` 時，通常的步驟是：
+
+1. **證明合取**：先證明 `x ∈ A ∧ x ∈ B`
+   - 如果 `hxA : x ∈ A` 且 `hxB : x ∈ B`，用 `⟨hxA, hxB⟩` 構造 `x ∈ A ∧ x ∈ B`
+
+2. **轉換為交集**：使用 `ZFSet.mem_inter.mpr` 將合取轉換為交集成員關係
+   - `ZFSet.mem_inter.mpr ⟨hxA, hxB⟩`
+
+**完整範例 3：從兩個成員關係推出交集**
+
+```lean
+theorem example_inter_mpr (A B x : ZFSet) : (x ∈ A ∧ x ∈ B) → x ∈ A ∩ B := by
+  intro h  -- h : x ∈ A ∧ x ∈ B
+  -- 直接使用 .mpr 轉換為交集成員關係
+  exact ZFSet.mem_inter.mpr h
+```
+
+**完整範例 4：從兩個獨立的假設構造交集**
+
+```lean
+theorem example_inter_construct (A B x : ZFSet) : (x ∈ A) → (x ∈ B) → x ∈ A ∩ B := by
+  intro hxA hxB  -- hxA : x ∈ A, hxB : x ∈ B
+  -- 步驟 1：構造合取 x ∈ A ∧ x ∈ B
+  have h_pair : x ∈ A ∧ x ∈ B := ⟨hxA, hxB⟩
+  -- 步驟 2：轉換為交集成員關係
+  exact ZFSet.mem_inter.mpr h_pair
+  -- 或者直接寫成：
+  -- exact ZFSet.mem_inter.mpr ⟨hxA, hxB⟩
+```
+
+**常見模式：**
+
+```lean
+-- 模式 1：從交集分解出左邊
+have h_pair : x ∈ A ∧ x ∈ B := ZFSet.mem_inter.mp h
+exact h_pair.left  -- 得到 x ∈ A
+
+-- 模式 2：從交集分解出右邊
+have h_pair : x ∈ A ∧ x ∈ B := ZFSet.mem_inter.mp h
+exact h_pair.right  -- 得到 x ∈ B
+
+-- 模式 3：從兩個成員關係構造交集
+exact ZFSet.mem_inter.mpr ⟨hxA, hxB⟩  -- hxA : x ∈ A, hxB : x ∈ B
+
+-- 模式 4：在證明中使用
+have h_inter : x ∈ A ∩ B := ZFSet.mem_inter.mpr ⟨hxA, hxB⟩
+```
+
+**實際應用範例（交集交換律）：**
+
+```lean
+theorem thm_2_2_1_j (A B x : ZFSet) : x ∈ A ∩ B → x ∈ B ∩ A := by
+  intro h  -- h : x ∈ A ∩ B
+  -- 步驟 1：將 x ∈ A ∩ B 轉換為 x ∈ A ∧ x ∈ B
+  have h_pair : x ∈ A ∧ x ∈ B := ZFSet.mem_inter.mp h
+  -- 步驟 2：交換順序，構造 x ∈ B ∧ x ∈ A
+  have h_pair_swap : x ∈ B ∧ x ∈ A := ⟨h_pair.right, h_pair.left⟩
+  -- 步驟 3：轉換為 x ∈ B ∩ A
+  exact ZFSet.mem_inter.mpr h_pair_swap
+  -- 或者更簡潔地寫成：
+  -- exact ZFSet.mem_inter.mpr ⟨(ZFSet.mem_inter.mp h).right, (ZFSet.mem_inter.mp h).left⟩
+```
+
+**關鍵理解：**
+
+1. **`.mp` 用於"分解"**：當我們有交集成員關係（`x ∈ A ∩ B`）時，用 `.mp` 轉換為合取（`x ∈ A ∧ x ∈ B`），然後可以使用 `.left` 或 `.right` 提取單個成員關係
+
+2. **`.mpr` 用於"構造"**：當我們有合取（`x ∈ A ∧ x ∈ B`）時，用 `.mpr` 轉換為交集成員關係（`x ∈ A ∩ B`）
+
+3. **配合合取構造使用**：
+   - 構造合取：`⟨hxA, hxB⟩`（其中 `hxA : x ∈ A`，`hxB : x ∈ B`）
+   - 轉換為交集：`ZFSet.mem_inter.mpr ⟨hxA, hxB⟩`
+
+4. **與聯集的對比**：
+   - 聯集使用析取（`∨`）和 `Or.inl`/`Or.inr`
+   - 交集使用合取（`∧`）和 `⟨...⟩` 構造
+
+**總結：**
+
+- `ZFSet.mem_inter.mp` 用於分解交集成員關係，提取單個集合的成員關係
+- `ZFSet.mem_inter.mpr` 用於構造交集成員關係，需要同時證明元素屬於兩個集合
+- 記住：交集需要兩個條件都成立（合取），而聯集只需要一個條件成立（析取）
+
 ### 2. `.left` 和 `.right`
 
 从合取命題中提取左右部分：
