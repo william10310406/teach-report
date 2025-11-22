@@ -328,24 +328,116 @@ theorem example14 (A B x : ZFSet) : x ∈ A ∩ B → x ∈ A := by
 
 ### 2. 析取（`∨`）- "或"
 
-**构造：** 使用 `Or.inl` 或 `Or.inr`
+#### 2.1 构造析取：`Or.inl` 和 `Or.inr`
+
+**类型签名：**
 ```lean
-have h : P ∨ Q := Or.inl 证明P  -- 左分支
-have h : P ∨ Q := Or.inr 证明Q  -- 右分支
+Or.inl {a b : Prop} (h : a) : a ∨ b  -- 左注入（Left injection）
+Or.inr {a b : Prop} (h : b) : a ∨ b  -- 右注入（Right injection）
 ```
 
-**分解：** 使用 `cases` 或 `rcases`
+**详细说明：**
+
+- **`Or.inl`**：将类型为 `a` 的证明注入到 `a ∨ b` 的左分支
+  - 如果 `h : a`，则 `Or.inl h : a ∨ b`
+  - 表示"选择左分支"，即"a 成立"
+
+- **`Or.inr`**：将类型为 `b` 的证明注入到 `a ∨ b` 的右分支
+  - 如果 `h : b`，则 `Or.inr h : a ∨ b`
+  - 表示"选择右分支"，即"b 成立"
+
+**构造语法：**
+```lean
+have h : P ∨ Q := Or.inl 证明P  -- 左分支：证明 P，得到 P ∨ Q
+have h : P ∨ Q := Or.inr 证明Q  -- 右分支：证明 Q，得到 P ∨ Q
+```
+
+**重要理解：**
+
+1. **`Or.inl` 和 `Or.inr` 的选择取决于目标类型**
+   - 如果目标是 `P ∨ Q`，且我们有 `h : P`，则用 `Or.inl h`
+   - 如果目标是 `P ∨ Q`，且我们有 `h : Q`，则用 `Or.inr h`
+
+2. **在并集证明中的应用**
+   - `x ∈ A ∪ B` 等价于 `x ∈ A ∨ x ∈ B`
+   - 如果 `hx : x ∈ A`，要证明 `x ∈ A ∪ B`，需要构造 `x ∈ A ∨ x ∈ B`
+   - 因为 `x ∈ A` 是 `x ∈ A ∨ x ∈ B` 的**左分支**，所以用 `Or.inl hx`
+   - 如果 `hx : x ∈ B`，要证明 `x ∈ A ∪ B`，需要构造 `x ∈ A ∨ x ∈ B`
+   - 因为 `x ∈ B` 是 `x ∈ A ∨ x ∈ B` 的**右分支**，所以用 `Or.inr hx`
+
+**示例 1：基本用法**
+```lean
+theorem example15 (A B x : ZFSet) : x ∈ A → x ∈ A ∪ B := by
+  intro hx  -- hx : x ∈ A
+  -- 目标：x ∈ A ∪ B，即 x ∈ A ∨ x ∈ B
+  -- 我们有 hx : x ∈ A，这是 x ∈ A ∨ x ∈ B 的左分支
+  exact ZFSet.mem_union.mpr (Or.inl hx)  -- 用 Or.inl 选择左分支
+```
+
+**示例 2：使用右分支**
+```lean
+theorem example15_right (A B x : ZFSet) : x ∈ B → x ∈ A ∪ B := by
+  intro hx  -- hx : x ∈ B
+  -- 目标：x ∈ A ∪ B，即 x ∈ A ∨ x ∈ B
+  -- 我们有 hx : x ∈ B，这是 x ∈ A ∨ x ∈ B 的右分支
+  exact ZFSet.mem_union.mpr (Or.inr hx)  -- 用 Or.inr 选择右分支
+```
+
+**示例 3：在并集交换律中的应用**
+```lean
+theorem example_union_comm (A B x : ZFSet) : x ∈ A ∪ B → x ∈ B ∪ A := by
+  intro h  -- h : x ∈ A ∪ B
+  rw [ZFSet.mem_union] at h  -- h : x ∈ A ∨ x ∈ B
+  cases h with
+  | inl hx =>  -- hx : x ∈ A
+    -- 目标：x ∈ B ∪ A，即 x ∈ B ∨ x ∈ A
+    -- 我们有 hx : x ∈ A，这是 x ∈ B ∨ x ∈ A 的右分支
+    exact ZFSet.mem_union.mpr (Or.inr hx)  -- 用 Or.inr（注意：在 B ∨ A 中，A 是右分支）
+  | inr hx =>  -- hx : x ∈ B
+    -- 目标：x ∈ B ∪ A，即 x ∈ B ∨ x ∈ A
+    -- 我们有 hx : x ∈ B，这是 x ∈ B ∨ x ∈ A 的左分支
+    exact ZFSet.mem_union.mpr (Or.inl hx)  -- 用 Or.inl（注意：在 B ∨ A 中，B 是左分支）
+```
+
+**关键要点：**
+
+- **`Or.inl`** = "Left injection" = 注入到左分支
+- **`Or.inr`** = "Right injection" = 注入到右分支
+- 选择哪个取决于**目标析取类型中证明所在的位置**
+  - 如果证明在目标类型的**左边**，用 `Or.inl`
+  - 如果证明在目标类型的**右边**，用 `Or.inr`
+
+**常见错误：**
+
+```lean
+-- ❌ 错误示例
+theorem wrong (A B x : ZFSet) : x ∈ B → x ∈ A ∪ B := by
+  intro hx  -- hx : x ∈ B
+  exact ZFSet.mem_union.mpr (Or.inl hx)  -- 错误！x ∈ B 是 x ∈ A ∨ x ∈ B 的右分支，应该用 Or.inr
+
+-- ✅ 正确示例
+theorem correct (A B x : ZFSet) : x ∈ B → x ∈ A ∪ B := by
+  intro hx  -- hx : x ∈ B
+  exact ZFSet.mem_union.mpr (Or.inr hx)  -- 正确！x ∈ B 是 x ∈ A ∨ x ∈ B 的右分支
+```
+
+#### 2.2 分解析取：`cases` 和 `rcases`
+
+**分解语法：**
 ```lean
 cases h with
-| inl hP => -- 处理 P 的情况
-| inr hQ => -- 处理 Q 的情况
+| inl hP => -- 处理 P 的情况（hP : P）
+| inr hQ => -- 处理 Q 的情况（hQ : Q）
 ```
 
 **示例：**
 ```lean
-theorem example15 (A B x : ZFSet) : x ∈ A → x ∈ A ∪ B := by
-  intro hx  -- hx : x ∈ A
-  exact ZFSet.mem_union.mpr (Or.inl hx)  -- x ∈ A ∨ x ∈ B，选择左分支
+theorem example16 (A B x : ZFSet) : x ∈ A ∪ B → (x ∈ A ∨ x ∈ B) := by
+  intro h  -- h : x ∈ A ∪ B
+  rw [ZFSet.mem_union] at h  -- h : x ∈ A ∨ x ∈ B
+  cases h with
+  | inl hx => exact Or.inl hx  -- 情况1：hx : x ∈ A，构造 x ∈ A ∨ x ∈ B 的左分支
+  | inr hx => exact Or.inr hx  -- 情况2：hx : x ∈ B，构造 x ∈ A ∨ x ∈ B 的右分支
 ```
 
 ### 3. 蕴含（`→`）- "如果...那么"
@@ -457,12 +549,61 @@ ZFSet.mem_union.mp   -- x ∈ A ∪ B → x ∈ A ∨ x ∈ B
 ZFSet.mem_union.mpr  -- x ∈ A ∨ x ∈ B → x ∈ A ∪ B
 ```
 
-**示例：**
+**重要：在并集证明中使用 `Or.inl` 和 `Or.inr`**
+
+由于 `x ∈ A ∪ B` 等价于 `x ∈ A ∨ x ∈ B`，我们需要使用 `Or.inl` 或 `Or.inr` 来构造析取：
+
+- **`Or.inl`**：当 `hx : x ∈ A` 时，构造 `x ∈ A ∨ x ∈ B` 的左分支
+- **`Or.inr`**：当 `hx : x ∈ B` 时，构造 `x ∈ A ∨ x ∈ B` 的右分支
+
+**示例 1：基本用法（左分支）**
 ```lean
 theorem example21 (A B x : ZFSet) : x ∈ A → x ∈ A ∪ B := by
-  intro hx
-  exact ZFSet.mem_union.mpr (Or.inl hx)  -- x ∈ A → x ∈ A ∨ x ∈ B → x ∈ A ∪ B
+  intro hx  -- hx : x ∈ A
+  -- 目标：x ∈ A ∪ B，即 x ∈ A ∨ x ∈ B
+  -- 我们有 hx : x ∈ A，这是 x ∈ A ∨ x ∈ B 的左分支
+  -- 所以用 Or.inl hx 构造 x ∈ A ∨ x ∈ B
+  -- 然后用 ZFSet.mem_union.mpr 转换为 x ∈ A ∪ B
+  exact ZFSet.mem_union.mpr (Or.inl hx)
 ```
+
+**示例 2：基本用法（右分支）**
+```lean
+theorem example21_right (A B x : ZFSet) : x ∈ B → x ∈ A ∪ B := by
+  intro hx  -- hx : x ∈ B
+  -- 目标：x ∈ A ∪ B，即 x ∈ A ∨ x ∈ B
+  -- 我们有 hx : x ∈ B，这是 x ∈ A ∨ x ∈ B 的右分支
+  -- 所以用 Or.inr hx 构造 x ∈ A ∨ x ∈ B
+  exact ZFSet.mem_union.mpr (Or.inr hx)
+```
+
+**示例 3：并集交换律（展示如何选择正确的分支）**
+```lean
+theorem example_union_comm (A B x : ZFSet) : x ∈ A ∪ B → x ∈ B ∪ A := by
+  intro h  -- h : x ∈ A ∪ B
+  rw [ZFSet.mem_union] at h  -- h : x ∈ A ∨ x ∈ B
+  cases h with
+  | inl hx =>  -- hx : x ∈ A
+    -- 目标：x ∈ B ∪ A，即 x ∈ B ∨ x ∈ A
+    -- 我们有 hx : x ∈ A，这是 x ∈ B ∨ x ∈ A 的右分支
+    -- 注意：在 x ∈ B ∨ x ∈ A 中，x ∈ A 是右分支！
+    exact ZFSet.mem_union.mpr (Or.inr hx)  -- 用 Or.inr（右分支）
+  | inr hx =>  -- hx : x ∈ B
+    -- 目标：x ∈ B ∪ A，即 x ∈ B ∨ x ∈ A
+    -- 我们有 hx : x ∈ B，这是 x ∈ B ∨ x ∈ A 的左分支
+    -- 注意：在 x ∈ B ∨ x ∈ A 中，x ∈ B 是左分支！
+    exact ZFSet.mem_union.mpr (Or.inl hx)  -- 用 Or.inl（左分支）
+```
+
+**关键理解：**
+
+在证明 `x ∈ A ∪ B` 时：
+1. 首先理解目标：`x ∈ A ∪ B` 等价于 `x ∈ A ∨ x ∈ B`
+2. 确定你有的证明：`hx : x ∈ A` 或 `hx : x ∈ B`
+3. 判断在 `x ∈ A ∨ x ∈ B` 中的位置：
+   - 如果 `hx : x ∈ A`，它在**左分支**，用 `Or.inl hx`
+   - 如果 `hx : x ∈ B`，它在**右分支**，用 `Or.inr hx`
+4. 使用 `ZFSet.mem_union.mpr` 将析取转换为并集成员关系
 
 ### 4. 交集（`∩`）
 
