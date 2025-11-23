@@ -204,6 +204,27 @@ def set_diff (A B : ZFSet) : ZFSet := ZFSet.sep (fun x => x ∉ B) A
 theorem mem_diff (A B x : ZFSet) : x ∈ set_diff A B ↔ x ∈ A ∧ x ∉ B :=
   ZFSet.mem_sep
 
+-- ============================================
+-- 補集合（Complement）的定義
+-- ============================================
+-- 數學定義：設 U 為全域集合，A ⊆ U，則 A 的補集合 Aᶜ = U - A
+-- 補集合表示在全域集合 U 中不屬於 A 的所有元素
+--
+-- 語法解析：
+--   def compl             定義函數 compl（complement 的縮寫）
+--   (U A : ZFSet)        參數：U 是全域集合，A 是要取補集合的集合
+--   : ZFSet               返回類型：ZFSet（一個集合）
+--   :=                    定義符號
+--   set_diff U A          使用差集合：U - A
+--
+-- 含義：compl U A = U - A = {x ∈ U : x ∉ A}
+--       即從全域集合 U 中選出所有不在 A 中的元素
+def compl (U A : ZFSet) : ZFSet := set_diff U A
+
+-- 補集合的成員關係：x ∈ compl U A ↔ x ∈ U ∧ x ∉ A
+theorem mem_compl (U A x : ZFSet) : x ∈ compl U A ↔ x ∈ U ∧ x ∉ A :=
+  mem_diff U A x
+
 -- Definition : Sets A and B are disjoint if A ∩ B = ∅
 theorem disjoint (A B : ZFSet) : A ∩ B = ∅ ↔ ∀x, x ∈ A → x ∉ B := by
   constructor
@@ -557,3 +578,77 @@ theorem theorem_2_2_1_o (A B : ZFSet) : A ⊆ B ↔ A ∪ B = B := by
     have h1 : x ∈ A ∪ B := ZFSet.mem_union.mpr (Or.inl hx_A) -- x ∈ A，所以 x ∈ A ∪ B（用 Or.inl 選擇左分支）
     rw [h_eq] at h1 -- 因為 A ∪ B = B，將 h1 中的 A ∪ B 重寫為 B，得到 x ∈ B
     exact h1 -- x ∈ B
+
+-- Theorem 2.2.1 (p) A ⊆ B ↔ A ∩ B = A
+theorem theorem_2_2_1_p (A B : ZFSet) : A ⊆ B ↔ A ∩ B = A := by
+  constructor -- 將 ↔ 分成兩個方向
+  · intro hAB -- hAB : A ⊆ B
+    -- 方向1：A ⊆ B → A ∩ B = A
+    apply ZFSet.ext -- 根據外延性公設，將 A ∩ B = A 轉換為 ∀ x, x ∈ A ∩ B ↔ x ∈ A
+    intro x -- x : any arbitrary element
+    constructor -- 將 ↔ 分成兩個部分
+    · intro hx_inter -- hx_inter : x ∈ A ∩ B
+      -- x ∈ A ∩ B → x ∈ A
+      exact (ZFSet.mem_inter.mp hx_inter).left -- 從 x ∈ A ∩ B 提取 x ∈ A
+    · intro hx_A -- hx_A : x ∈ A
+      -- x ∈ A → x ∈ A ∩ B
+      have hx_B : x ∈ B := hAB hx_A -- 因為 A ⊆ B，所以 x ∈ B
+      exact ZFSet.mem_inter.mpr ⟨hx_A, hx_B⟩ -- x ∈ A ∧ x ∈ B, so x ∈ A ∩ B
+  · intro h_eq x hx_A -- h_eq : A ∩ B = A, x : any arbitrary element, hx_A : x ∈ A
+    -- 方向2：A ∩ B = A → A ⊆ B
+    -- 目標：證明 x ∈ B
+    rw [← h_eq] at hx_A -- 因為 A ∩ B = A，將 hx_A 中的 A 重寫為 A ∩ B，得到 x ∈ A ∩ B
+    exact (ZFSet.mem_inter.mp hx_A).right -- 從 x ∈ A ∩ B 提取 x ∈ B
+
+-- Theorem 2.2.1 (q) A ⊆ B → A ∪ C ⊆ B ∪ C
+theorem theorem_2_2_1_q (A B C : ZFSet) : A ⊆ B → A ∪ C ⊆ B ∪ C  := by
+  intro hA_B x hx_union -- hA_B : A ⊆ B, x : any arbitrary element, hx_union : x ∈ A ∪ C
+  -- 目標：證明 x ∈ B ∪ C
+  rw [ZFSet.mem_union] at hx_union -- 將 x ∈ A ∪ C 拆成 x ∈ A ∨ x ∈ C
+  cases hx_union with
+  | inl hx_A => -- 情況1：hx_A : x ∈ A
+    -- 因為 A ⊆ B，所以 x ∈ B
+    have hx_B : x ∈ B := hA_B hx_A -- 應用 hA_B : A ⊆ B 到 hx_A : x ∈ A，得到 x ∈ B
+    -- x ∈ B，所以 x ∈ B ∪ C（用 Or.inl 選擇左分支，因為 x ∈ B 是 x ∈ B ∨ x ∈ C 的左分支）
+    exact ZFSet.mem_union.mpr (Or.inl hx_B)
+  | inr hx_C => -- 情況2：hx_C : x ∈ C
+    -- x ∈ C，所以 x ∈ B ∪ C（用 Or.inr 選擇右分支，因為 x ∈ C 是 x ∈ B ∨ x ∈ C 的右分支）
+    exact ZFSet.mem_union.mpr (Or.inr hx_C)
+
+-- Theorem 2.2.1 (r) A ⊆ B → A ∩ C ⊆ B ∩ C
+theorem theorem_2_2_1_r (A B C : ZFSet) : A ⊆ B → A ∩ C ⊆ B ∩ C := by
+  intro hA_B x hx_inter -- hA_B : A ⊆ B, x : any arbitrary element, hx_inter : x ∈ A ∩ C
+  -- 目標：證明 x ∈ B ∩ C
+  have h1 : x ∈ A ∧ x ∈ C := ZFSet.mem_inter.mp hx_inter -- 將 x ∈ A ∩ C 拆成 x ∈ A ∧ x ∈ C（使用 .mp 分解交集成員關係）
+  have hx_B : x ∈ B := hA_B h1.left -- 應用 hA_B : A ⊆ B 到 h1.left : x ∈ A，得到 x ∈ B
+  have hx_C : x ∈ C := h1.right -- 從 x ∈ A ∧ x ∈ C 提取 x ∈ C（使用 .right 提取合取的右部分）
+  exact ZFSet.mem_inter.mpr ⟨hx_B, hx_C⟩ -- x ∈ B ∧ x ∈ C，所以 x ∈ B ∩ C（使用 .mpr 構造交集成員關係）
+
+-- Definition Let U be the universe and A ⊆ U. The complement of A is the set Aᶜ = U - A
+-- 補集合的定義：相對於全域集合 U，A 的補集合定義為 U - A
+-- 這個定理展示補集合的成員關係：x ∈ compl U A ↔ x ∈ U ∧ x ∉ A
+-- 使用新定義的 compl 函數和 mem_compl 定理
+theorem definition_2_2_1_a (U A x : ZFSet) : x ∈ compl U A ↔ x ∈ U ∧ x ∉ A := by
+  exact mem_compl U A x -- 根據補集合的定義 mem_compl，x ∈ compl U A ↔ x ∈ U ∧ x ∉ A
+
+-- Theorem 2.2.2 (a) (Aᶜ)ᶜ = A
+theorem theorem_2_2_2_a (U A : ZFSet) (hA_subset_U : A ⊆ U) : compl U (compl U A) = A := by
+  apply ZFSet.ext -- 根據外延性公設，將 compl U (compl U A) = A 轉換為 ∀ x, x ∈ compl U (compl U A) ↔ x ∈ A
+  intro x -- x : any arbitrary element
+  constructor -- 將 ↔ 分成兩個部分
+  · intro hx_compl_compl -- hx_compl_compl : x ∈ compl U (compl U A)
+    -- x ∈ compl U (compl U A) → x ∈ A
+    have h1 : x ∈ U ∧ x ∉ compl U A := (mem_compl U (compl U A) x).mp hx_compl_compl -- 將 x ∈ compl U (compl U A) 拆成 x ∈ U ∧ x ∉ compl U A（使用 .mp 分解補集合成員關係）
+    by_contra hx_not_in_A -- 假設 x ∉ A（要證明 x ∈ A，所以假設其否定）
+    have hx_in_compl : x ∈ compl U A := (mem_compl U A x).mpr ⟨h1.left, hx_not_in_A⟩ -- 將 x ∈ U ∧ x ∉ A 轉換為 x ∈ compl U A（使用 .mpr 構造補集合成員關係）
+    exact h1.right hx_in_compl -- 矛盾：x ∉ compl U A（從 h1.right）和 x ∈ compl U A（從 hx_in_compl）
+  · intro hx_A -- hx_A : x ∈ A
+    -- x ∈ A → x ∈ compl U (compl U A)
+    have hx_in_U : x ∈ U := hA_subset_U hx_A -- 因為 A ⊆ U 且 x ∈ A，所以 x ∈ U（應用子集合關係）
+    -- 要證明 x ∈ compl U (compl U A)，需要證明 x ∈ U ∧ x ∉ compl U A
+    -- 我們已經有 x ∈ U（從 hx_in_U），現在需要證明 x ∉ compl U A
+    have hx_not_compl : x ∉ compl U A := by -- 證明 x ∉ compl U A
+      by_contra hx_in_compl -- 假設 x ∈ compl U A（要證明 x ∉ compl U A，所以假設其否定）
+      have h2 : x ∈ U ∧ x ∉ A := (mem_compl U A x).mp hx_in_compl -- 將 x ∈ compl U A 拆成 x ∈ U ∧ x ∉ A（使用 .mp 分解補集合成員關係）
+      exact h2.right hx_A -- 矛盾：x ∉ A（從 h2.right）和 x ∈ A（從 hx_A）
+    exact (mem_compl U (compl U A) x).mpr ⟨hx_in_U, hx_not_compl⟩ -- 將 x ∈ U ∧ x ∉ compl U A 轉換為 x ∈ compl U (compl U A)（使用 .mpr 構造補集合成員關係）

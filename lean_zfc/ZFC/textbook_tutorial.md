@@ -15,7 +15,9 @@
    - [交集（`∩`）](#4-交集)
    - [綜合範例：分配律（聯集對交集的分配律）](#45-綜合範例分配律聯集對交集的分配律)
    - [綜合範例：分配律（交集對聯集的分配律）](#46-綜合範例分配律交集對聯集的分配律)
-   - [綜合範例：子集合關係與集合相等的等價關係](#47-綜合範例子集合關係與集合相等的等價關係)
+   - [綜合範例：冪集合與子集合關係的等價關係](#47-綜合範例冪集合與子集合關係的等價關係)
+   - [綜合範例：子集合關係與集合相等的等價關係（聯集版本）](#48-綜合範例子集合關係與集合相等的等價關係聯集版本)
+   - [綜合範例：子集合關係與集合相等的等價關係（交集版本）](#49-綜合範例子集合關係與集合相等的等價關係交集版本)
 5. [常見證明模式](#常見證明模式)
 6. [完整證明範例](#完整證明範例)
 7. [常用技巧總結](#常用技巧總結)
@@ -1159,7 +1161,135 @@ theorem theorem_2_2_1_m (A B C : ZFSet) : A ∩ (B ∪ C) = (A ∩ B) ∪ (A ∩
 - 這個證明比聯集對交集的分配律更簡單，因為只需要一層分情況討論
 - 關鍵是理解如何從交集中提取信息，並構造聯集
 
-#### 4.7 綜合範例：子集合關係與集合相等的等價關係
+#### 4.7 綜合範例：冪集合與子集合關係的等價關係
+
+**定理：** `A ⊆ B ↔ 𝒫(A) ⊆ 𝒫(B)`
+
+這是一個非常重要的定理，它建立了子集合關係和冪集合之間的等價關係。這個證明展示了：
+- 如何使用冪集合的成員關係
+- 如何利用子集合關係的傳遞性
+- 如何構造冪集合的成員
+
+**完整證明：**
+
+```lean
+theorem theorem_2_1_5(A B : ZFSet) : A ⊆ B ↔ ZFSet.powerset A ⊆ ZFSet.powerset B := by
+  constructor
+  -- 方向 1：A ⊆ B → 𝒫(A) ⊆ 𝒫(B)
+  · intro h x hx -- h : A ⊆ B, hx : x ∈ 𝒫(A)，即 x ∈ ZFSet.powerset A
+    -- 要證明 x ∈ 𝒫(B)，即 x ∈ ZFSet.powerset B，需要證明 x ⊆ B
+    -- 首先，從 x ∈ 𝒫(A) 推出 x ⊆ A
+    have hx_subset_A : x ⊆ A := ZFSet.mem_powerset.mp hx
+    -- 由於 x ⊆ A 且 A ⊆ B，所以 x ⊆ B
+    have hx_subset_B : x ⊆ B := fun y hy => h (hx_subset_A hy)
+    -- 因此 x ∈ 𝒫(B)
+    exact ZFSet.mem_powerset.mpr hx_subset_B
+  -- 方向 2：𝒫(A) ⊆ 𝒫(B) → A ⊆ B
+  · intro h x hx -- h : 𝒫(A) ⊆ 𝒫(B), hx : x ∈ A
+    -- 要證明 x ∈ B
+    -- 首先，注意到 A 本身是 A 的子集合，所以 A ∈ 𝒫(A)
+    have hA_in_powerset_A : A ∈ ZFSet.powerset A := ZFSet.mem_powerset.mpr (fun y hy => hy)
+    have hA_in_powerset_B : A ∈ ZFSet.powerset B := h hA_in_powerset_A
+    have hA_subset_B : A ⊆ B := ZFSet.mem_powerset.mp hA_in_powerset_B
+    -- 由於 x ∈ A 且 A ⊆ B，所以 x ∈ B
+    exact hA_subset_B hx
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`A ⊆ B → 𝒫(A) ⊆ 𝒫(B)`
+
+**目標：** 證明如果 `A ⊆ B`，則 `𝒫(A) ⊆ 𝒫(B)`
+
+**步驟 1：引入假設**
+- `intro h x hx`：引入 `A ⊆ B` 和 `x ∈ 𝒫(A)`
+- 目標：證明 `x ∈ 𝒫(B)`，即 `x ⊆ B`
+
+**步驟 2：從冪集合提取子集合關係**
+- `ZFSet.mem_powerset.mp hx`：將 `x ∈ 𝒫(A)` 轉換為 `x ⊆ A`
+- 現在我們有：`x ⊆ A` 和 `A ⊆ B`
+
+**步驟 3：利用傳遞性**
+- 因為 `x ⊆ A` 且 `A ⊆ B`，所以 `x ⊆ B`
+- 使用函數構造：`fun y hy => h (hx_subset_A hy)`
+  - 對於任意 `y ∈ x`，因為 `x ⊆ A`，所以 `y ∈ A`
+  - 因為 `A ⊆ B`，所以 `y ∈ B`
+  - 因此 `x ⊆ B`
+
+**步驟 4：構造冪集合成員關係**
+- `ZFSet.mem_powerset.mpr hx_subset_B`：將 `x ⊆ B` 轉換為 `x ∈ 𝒫(B)`
+
+**關鍵理解：**
+- 如果 `A ⊆ B`，則 `A` 的所有子集合都是 `B` 的子集合
+- 因此 `𝒫(A)` 的所有元素都在 `𝒫(B)` 中
+- 所以 `𝒫(A) ⊆ 𝒫(B)`
+
+#### 第二個方向：`𝒫(A) ⊆ 𝒫(B) → A ⊆ B`
+
+**目標：** 證明如果 `𝒫(A) ⊆ 𝒫(B)`，則 `A ⊆ B`
+
+**步驟 1：引入假設**
+- `intro h x hx`：引入 `𝒫(A) ⊆ 𝒫(B)` 和 `x ∈ A`
+- 目標：證明 `x ∈ B`
+
+**步驟 2：利用 `A` 本身**
+- `A` 是 `A` 的子集合（自反性），所以 `A ∈ 𝒫(A)`
+- 使用 `ZFSet.mem_powerset.mpr (fun y hy => hy)` 構造
+  - `fun y hy => hy` 表示：對於任意 `y ∈ A`，有 `y ∈ A`（自反性）
+
+**步驟 3：應用子集合關係**
+- 因為 `𝒫(A) ⊆ 𝒫(B)` 且 `A ∈ 𝒫(A)`，所以 `A ∈ 𝒫(B)`
+- 使用 `h hA_in_powerset_A` 得到 `A ∈ 𝒫(B)`
+
+**步驟 4：從冪集合提取子集合關係**
+- `ZFSet.mem_powerset.mp hA_in_powerset_B`：將 `A ∈ 𝒫(B)` 轉換為 `A ⊆ B`
+
+**步驟 5：應用子集合關係**
+- 因為 `x ∈ A` 且 `A ⊆ B`，所以 `x ∈ B`
+- 使用 `hA_subset_B hx` 完成證明
+
+**關鍵理解：**
+- 如果 `𝒫(A) ⊆ 𝒫(B)`，則 `A` 本身（作為 `A` 的子集合）必須在 `𝒫(B)` 中
+- 因此 `A ⊆ B`
+- 這展示了如何利用集合本身來證明子集合關係
+
+**為什麼這個定理很重要？**
+
+1. **建立等價關係**：它告訴我們，`A ⊆ B` 和 `𝒫(A) ⊆ 𝒫(B)` 是等價的
+   - 這意味著我們可以用冪集合來描述子集合關係
+   - 也可以用子集合關係來描述冪集合的包含關係
+
+2. **實際應用**：
+   - 當我們需要證明 `A ⊆ B` 時，可以改為證明 `𝒫(A) ⊆ 𝒫(B)`
+   - 當我們需要證明 `𝒫(A) ⊆ 𝒫(B)` 時，可以改為證明 `A ⊆ B`
+
+3. **直觀理解**：
+   - `A ⊆ B` 意味著 `A` 的所有元素都在 `B` 中
+   - `𝒫(A) ⊆ 𝒫(B)` 意味著 `A` 的所有子集合都是 `B` 的子集合
+   - 這兩個描述在本質上是相同的
+
+**關鍵技巧總結：**
+
+1. **冪集合的轉換**：
+   - `ZFSet.mem_powerset.mp`：將 `x ∈ 𝒫(A)` 轉換為 `x ⊆ A`
+   - `ZFSet.mem_powerset.mpr`：將 `x ⊆ A` 轉換為 `x ∈ 𝒫(A)`
+
+2. **子集合關係的傳遞性**：
+   - 如果 `x ⊆ A` 且 `A ⊆ B`，則 `x ⊆ B`
+   - 使用函數構造：`fun y hy => h (hx_subset_A hy)`
+
+3. **利用集合本身**：
+   - `A` 是 `A` 的子集合（自反性）
+   - 因此 `A ∈ 𝒫(A)`
+   - 這是證明第二個方向的關鍵
+
+**記憶要點：**
+- `A ⊆ B ↔ 𝒫(A) ⊆ 𝒫(B)` 建立了子集合關係和冪集合包含關係的等價關係
+- 證明時需要分別證明兩個方向
+- 第一個方向使用傳遞性
+- 第二個方向利用集合本身（`A ∈ 𝒫(A)`）
+
+#### 4.8 綜合範例：子集合關係與集合相等的等價關係（聯集版本）
 
 **定理：** `A ⊆ B ↔ A ∪ B = B`
 
@@ -1283,6 +1413,250 @@ theorem theorem_2_2_1_o (A B : ZFSet) : A ⊆ B ↔ A ∪ B = B := by
 - 第一個方向使用外延性公理和分情況討論
 - 第二個方向使用等式重寫，這是利用等式的重要技巧
 
+#### 4.9 綜合範例：子集合關係與集合相等的等價關係（交集版本）
+
+**定理：** `A ⊆ B ↔ A ∩ B = A`
+
+這是前一個定理的對應版本，使用交集而不是聯集。這個定理同樣建立了子集合關係和集合相等之間的等價關係，但從交集的角度來理解。
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_1_p (A B : ZFSet) : A ⊆ B ↔ A ∩ B = A := by
+  constructor -- 將 ↔ 分成兩個方向
+  · intro hAB -- hAB : A ⊆ B
+    -- 方向1：A ⊆ B → A ∩ B = A
+    apply ZFSet.ext -- 根據外延性公設，將 A ∩ B = A 轉換為 ∀ x, x ∈ A ∩ B ↔ x ∈ A
+    intro x -- x : any arbitrary element
+    constructor -- 將 ↔ 分成兩個部分
+    · intro hx_inter -- hx_inter : x ∈ A ∩ B
+      -- x ∈ A ∩ B → x ∈ A
+      exact (ZFSet.mem_inter.mp hx_inter).left -- 從 x ∈ A ∩ B 提取 x ∈ A
+    · intro hx_A -- hx_A : x ∈ A
+      -- x ∈ A → x ∈ A ∩ B
+      have hx_B : x ∈ B := hAB hx_A -- 因為 A ⊆ B，所以 x ∈ B
+      exact ZFSet.mem_inter.mpr ⟨hx_A, hx_B⟩ -- x ∈ A ∧ x ∈ B, so x ∈ A ∩ B
+  · intro h_eq x hx_A -- h_eq : A ∩ B = A, x : any arbitrary element, hx_A : x ∈ A
+    -- 方向2：A ∩ B = A → A ⊆ B
+    -- 目標：證明 x ∈ B
+    rw [← h_eq] at hx_A -- 因為 A ∩ B = A，將 hx_A 中的 A 重寫為 A ∩ B，得到 x ∈ A ∩ B
+    exact (ZFSet.mem_inter.mp hx_A).right -- 從 x ∈ A ∩ B 提取 x ∈ B
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`A ⊆ B → A ∩ B = A`
+
+**目標：** 證明如果 `A ⊆ B`，則 `A ∩ B = A`
+
+**步驟 1：使用外延性公理**
+- `apply ZFSet.ext`：將 `A ∩ B = A` 轉換為 `∀ x, x ∈ A ∩ B ↔ x ∈ A`
+- 現在需要證明：對於任意 `x`，`x ∈ A ∩ B` 當且僅當 `x ∈ A`
+
+**步驟 2：證明雙條件 `x ∈ A ∩ B ↔ x ∈ A`**
+
+**方向 1.1：`x ∈ A ∩ B → x ∈ A`**
+- 直接從交集定義得到：`x ∈ A ∩ B` 意味著 `x ∈ A ∧ x ∈ B`
+- 使用 `(ZFSet.mem_inter.mp hx_inter).left` 提取 `x ∈ A`
+- 這一步很簡單，因為交集本身就包含 `x ∈ A` 這個條件
+
+**方向 1.2：`x ∈ A → x ∈ A ∩ B`**
+- 如果 `x ∈ A`，因為 `A ⊆ B`（從假設 `hAB`），所以 `x ∈ B`
+- 因此 `x ∈ A ∧ x ∈ B`，所以 `x ∈ A ∩ B`
+- 使用 `ZFSet.mem_inter.mpr ⟨hx_A, hx_B⟩` 構造
+
+**關鍵理解：**
+- 如果 `A ⊆ B`，則 `A` 的所有元素都在 `B` 中
+- 因此 `A` 的所有元素都在 `A ∩ B` 中（因為 `x ∈ A` 且 `x ∈ B`）
+- 同時，`A ∩ B` 的所有元素都在 `A` 中（因為交集是 `A` 的子集合）
+- 所以 `A ∩ B = A`
+
+#### 第二個方向：`A ∩ B = A → A ⊆ B`
+
+**目標：** 證明如果 `A ∩ B = A`，則 `A ⊆ B`
+
+**步驟 1：引入假設**
+- `intro h_eq x hx_A`：引入 `A ∩ B = A` 和 `x ∈ A`
+- 目標：證明 `x ∈ B`
+
+**步驟 2：利用等式（反向重寫）**
+- 因為 `A ∩ B = A`，所以 `x ∈ A` 意味著 `x ∈ A ∩ B`
+- 使用 `rw [← h_eq]` 將 `hx_A` 中的 `A` 重寫為 `A ∩ B`（注意 `←` 表示反向，從右到左）
+- 現在 `hx_A` 變成 `x ∈ A ∩ B`
+- 從 `x ∈ A ∩ B` 可以提取 `x ∈ B`（使用 `.right`）
+
+**關鍵理解：**
+- 如果 `A ∩ B = A`，則 `A` 的所有元素都在 `A ∩ B` 中
+- 因為 `A ∩ B` 的元素必須同時在 `A` 和 `B` 中
+- 所以 `A` 的所有元素都在 `B` 中
+- 因此 `A ⊆ B`
+
+**與前一個定理的對比：**
+
+| 定理 | 形式 | 關鍵差異 |
+|------|------|----------|
+| 聯集版本 | `A ⊆ B ↔ A ∪ B = B` | 使用聯集，需要分情況討論 |
+| 交集版本 | `A ⊆ B ↔ A ∩ B = A` | 使用交集，直接提取即可 |
+
+**為什麼這個證明更簡單？**
+
+1. **第一個方向**：
+   - 方向 1.1：直接從交集提取 `x ∈ A`，不需要分情況
+   - 方向 1.2：利用 `A ⊆ B` 證明 `x ∈ B`，然後構造交集
+
+2. **第二個方向**：
+   - 使用反向等式重寫（`rw [← h_eq]`）
+   - 直接從交集提取 `x ∈ B`
+   - 不需要分情況討論
+
+**關鍵技巧總結：**
+
+1. **反向等式重寫（`rw [← h_eq]`）**：
+   - `←` 表示反向，從右到左使用等式
+   - `rw [← h_eq] at hx_A`：將 `hx_A` 中的等式右邊重寫為左邊
+   - 例如：如果 `h_eq : A ∩ B = A`，則 `rw [← h_eq]` 將 `A` 重寫為 `A ∩ B`
+
+2. **交集的提取**：
+   - `(ZFSet.mem_inter.mp hx_inter).left`：提取 `x ∈ A`
+   - `(ZFSet.mem_inter.mp hx_inter).right`：提取 `x ∈ B`
+
+3. **交集的構造**：
+   - `ZFSet.mem_inter.mpr ⟨hx_A, hx_B⟩`：從 `x ∈ A` 和 `x ∈ B` 構造 `x ∈ A ∩ B`
+
+**記憶要點：**
+- `A ⊆ B ↔ A ∩ B = A` 是聯集版本的對應定理
+- 這個證明比聯集版本更簡單，因為不需要分情況討論
+- 關鍵是理解反向等式重寫（`rw [← h_eq]`）的使用
+- 交集版本和聯集版本都建立了子集合關係和集合相等的等價關係
+
+#### 4.9 綜合範例：冪集合與子集合關係的等價關係
+
+**定理：** `A ⊆ B ↔ 𝒫(A) ⊆ 𝒫(B)`
+
+這是一個非常重要的定理，它建立了子集合關係和冪集合之間的等價關係。這個證明展示了：
+- 如何使用冪集合的成員關係
+- 如何利用子集合關係的傳遞性
+- 如何構造冪集合的成員
+
+**完整證明：**
+
+```lean
+theorem theorem_2_1_5(A B : ZFSet) : A ⊆ B ↔ ZFSet.powerset A ⊆ ZFSet.powerset B := by
+  constructor
+  -- 方向 1：A ⊆ B → 𝒫(A) ⊆ 𝒫(B)
+  · intro h x hx -- h : A ⊆ B, hx : x ∈ 𝒫(A)，即 x ∈ ZFSet.powerset A
+    -- 要證明 x ∈ 𝒫(B)，即 x ∈ ZFSet.powerset B，需要證明 x ⊆ B
+    -- 首先，從 x ∈ 𝒫(A) 推出 x ⊆ A
+    have hx_subset_A : x ⊆ A := ZFSet.mem_powerset.mp hx
+    -- 由於 x ⊆ A 且 A ⊆ B，所以 x ⊆ B
+    have hx_subset_B : x ⊆ B := fun y hy => h (hx_subset_A hy)
+    -- 因此 x ∈ 𝒫(B)
+    exact ZFSet.mem_powerset.mpr hx_subset_B
+  -- 方向 2：𝒫(A) ⊆ 𝒫(B) → A ⊆ B
+  · intro h x hx -- h : 𝒫(A) ⊆ 𝒫(B), hx : x ∈ A
+    -- 要證明 x ∈ B
+    -- 首先，注意到 A 本身是 A 的子集合，所以 A ∈ 𝒫(A)
+    have hA_in_powerset_A : A ∈ ZFSet.powerset A := ZFSet.mem_powerset.mpr (fun y hy => hy)
+    have hA_in_powerset_B : A ∈ ZFSet.powerset B := h hA_in_powerset_A
+    have hA_subset_B : A ⊆ B := ZFSet.mem_powerset.mp hA_in_powerset_B
+    -- 由於 x ∈ A 且 A ⊆ B，所以 x ∈ B
+    exact hA_subset_B hx
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`A ⊆ B → 𝒫(A) ⊆ 𝒫(B)`
+
+**目標：** 證明如果 `A ⊆ B`，則 `𝒫(A) ⊆ 𝒫(B)`
+
+**步驟 1：引入假設**
+- `intro h x hx`：引入 `A ⊆ B` 和 `x ∈ 𝒫(A)`
+- 目標：證明 `x ∈ 𝒫(B)`，即 `x ⊆ B`
+
+**步驟 2：從冪集合提取子集合關係**
+- `ZFSet.mem_powerset.mp hx`：將 `x ∈ 𝒫(A)` 轉換為 `x ⊆ A`
+- 現在我們有：`x ⊆ A` 和 `A ⊆ B`
+
+**步驟 3：利用傳遞性**
+- 因為 `x ⊆ A` 且 `A ⊆ B`，所以 `x ⊆ B`
+- 使用函數構造：`fun y hy => h (hx_subset_A hy)`
+  - 對於任意 `y ∈ x`，因為 `x ⊆ A`，所以 `y ∈ A`
+  - 因為 `A ⊆ B`，所以 `y ∈ B`
+  - 因此 `x ⊆ B`
+
+**步驟 4：構造冪集合成員關係**
+- `ZFSet.mem_powerset.mpr hx_subset_B`：將 `x ⊆ B` 轉換為 `x ∈ 𝒫(B)`
+
+**關鍵理解：**
+- 如果 `A ⊆ B`，則 `A` 的所有子集合都是 `B` 的子集合
+- 因此 `𝒫(A)` 的所有元素都在 `𝒫(B)` 中
+- 所以 `𝒫(A) ⊆ 𝒫(B)`
+
+#### 第二個方向：`𝒫(A) ⊆ 𝒫(B) → A ⊆ B`
+
+**目標：** 證明如果 `𝒫(A) ⊆ 𝒫(B)`，則 `A ⊆ B`
+
+**步驟 1：引入假設**
+- `intro h x hx`：引入 `𝒫(A) ⊆ 𝒫(B)` 和 `x ∈ A`
+- 目標：證明 `x ∈ B`
+
+**步驟 2：利用 `A` 本身**
+- `A` 是 `A` 的子集合（自反性），所以 `A ∈ 𝒫(A)`
+- 使用 `ZFSet.mem_powerset.mpr (fun y hy => hy)` 構造
+  - `fun y hy => hy` 表示：對於任意 `y ∈ A`，有 `y ∈ A`（自反性）
+
+**步驟 3：應用子集合關係**
+- 因為 `𝒫(A) ⊆ 𝒫(B)` 且 `A ∈ 𝒫(A)`，所以 `A ∈ 𝒫(B)`
+- 使用 `h hA_in_powerset_A` 得到 `A ∈ 𝒫(B)`
+
+**步驟 4：從冪集合提取子集合關係**
+- `ZFSet.mem_powerset.mp hA_in_powerset_B`：將 `A ∈ 𝒫(B)` 轉換為 `A ⊆ B`
+
+**步驟 5：應用子集合關係**
+- 因為 `x ∈ A` 且 `A ⊆ B`，所以 `x ∈ B`
+- 使用 `hA_subset_B hx` 完成證明
+
+**關鍵理解：**
+- 如果 `𝒫(A) ⊆ 𝒫(B)`，則 `A` 本身（作為 `A` 的子集合）必須在 `𝒫(B)` 中
+- 因此 `A ⊆ B`
+- 這展示了如何利用集合本身來證明子集合關係
+
+**為什麼這個定理很重要？**
+
+1. **建立等價關係**：它告訴我們，`A ⊆ B` 和 `𝒫(A) ⊆ 𝒫(B)` 是等價的
+   - 這意味著我們可以用冪集合來描述子集合關係
+   - 也可以用子集合關係來描述冪集合的包含關係
+
+2. **實際應用**：
+   - 當我們需要證明 `A ⊆ B` 時，可以改為證明 `𝒫(A) ⊆ 𝒫(B)`
+   - 當我們需要證明 `𝒫(A) ⊆ 𝒫(B)` 時，可以改為證明 `A ⊆ B`
+
+3. **直觀理解**：
+   - `A ⊆ B` 意味著 `A` 的所有元素都在 `B` 中
+   - `𝒫(A) ⊆ 𝒫(B)` 意味著 `A` 的所有子集合都是 `B` 的子集合
+   - 這兩個描述在本質上是相同的
+
+**關鍵技巧總結：**
+
+1. **冪集合的轉換**：
+   - `ZFSet.mem_powerset.mp`：將 `x ∈ 𝒫(A)` 轉換為 `x ⊆ A`
+   - `ZFSet.mem_powerset.mpr`：將 `x ⊆ A` 轉換為 `x ∈ 𝒫(A)`
+
+2. **子集合關係的傳遞性**：
+   - 如果 `x ⊆ A` 且 `A ⊆ B`，則 `x ⊆ B`
+   - 使用函數構造：`fun y hy => h (hx_subset_A hy)`
+
+3. **利用集合本身**：
+   - `A` 是 `A` 的子集合（自反性）
+   - 因此 `A ∈ 𝒫(A)`
+   - 這是證明第二個方向的關鍵
+
+**記憶要點：**
+- `A ⊆ B ↔ 𝒫(A) ⊆ 𝒫(B)` 建立了子集合關係和冪集合包含關係的等價關係
+- 證明時需要分別證明兩個方向
+- 第一個方向使用傳遞性
+- 第二個方向利用集合本身（`A ∈ 𝒫(A)`）
+
 ### 5. 差集合（`A - B`）
 
 **定義：** `set_diff A B = {x ∈ A : x ∉ B}`
@@ -1301,6 +1675,38 @@ theorem example23 (A x : ZFSet) : x ∈ A → x ∈ set_diff A ∅ := by
   intro hx
   exact (mem_diff A ∅ x).mpr ⟨hx, ZFSet.notMem_empty x⟩
 ```
+
+### 6. 補集合（`Aᶜ`）
+
+**定義：** 設 `U` 為全域集合，`A ⊆ U`，則 `A` 的補集合 `compl U A = U - A`
+
+**成員關係：** `x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
+
+**使用：**
+```lean
+compl U A              -- A 的補集合（相對於全域集合 U）
+(mem_compl U A x).mp   -- x ∈ compl U A → x ∈ U ∧ x ∉ A
+(mem_compl U A x).mpr  -- x ∈ U ∧ x ∉ A → x ∈ compl U A
+```
+
+**詳細說明：**
+
+補集合是相對於全域集合 `U` 定義的。`A` 的補集合 `compl U A` 表示在全域集合 `U` 中不屬於 `A` 的所有元素。
+
+**定義解析：**
+- `compl U A = set_diff U A`：補集合就是差集合 `U - A`
+- `x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`：元素 `x` 屬於補集合當且僅當 `x` 在全域集合 `U` 中且不在 `A` 中
+
+**範例：**
+```lean
+theorem example_compl (U A x : ZFSet) : x ∈ compl U A ↔ x ∈ U ∧ x ∉ A := by
+  exact mem_compl U A x  -- 直接使用補集合的定義
+```
+
+**與差集合的關係：**
+- 補集合是差集合的特殊情況
+- `compl U A = set_diff U A`
+- 補集合的成員關係與差集合相同：`mem_compl U A x = mem_diff U A x`
 
 ---
 
@@ -1392,6 +1798,30 @@ theorem theorem_2_1_1_a(A : ZFSet) : ∅ ⊆ A := by
 2. `have : False := ZFSet.notMem_empty x hx`：从 `x ∈ ∅` 推出矛盾
 3. `exact this.elim`：从矛盾推出任何结论（包括 `x ∈ A`）
 
+**關鍵理解：**
+- 這是「空真命題」（Vacuous Truth）的典型例子
+- 前提 `x ∈ ∅` 永遠為假（因為空集合沒有元素）
+- 從假的前提可以推出任何結論
+- 這是邏輯中的一個重要原理：`False → P` 對任何命題 `P` 都成立
+
+### 範例 1.5：集合的自反性
+
+```lean
+theorem theorem_2_1_1_b(A : ZFSet) : A ⊆ A := by
+  intro x hx
+  exact hx
+```
+
+**步驟解析：**
+1. `intro x hx`：引入 `∀ x, x ∈ A → x ∈ A` 中的 x 和 `x ∈ A`
+2. `exact hx`：直接使用假設 `hx : x ∈ A` 完成證明
+
+**關鍵理解：**
+- 這是最簡單的證明之一
+- 目標是 `x ∈ A`，而我們已經有 `hx : x ∈ A`
+- 直接使用 `exact` 即可完成
+- 這展示了集合包含關係的自反性：任何集合都是自己的子集合
+
 ### 範例 2：集合包含關係的傳遞性
 
 ```lean
@@ -1452,6 +1882,131 @@ theorem exercise_2_1_7(A B x : ZFSet) : (x ∉ B ∧ A ⊆ B) → x ∉ A := by
 4. `have hx_in_B : x ∈ B := hA_subset_B hx_in_A`：推出 `x ∈ B`
 5. `exact hx_notin_B hx_in_B`：矛盾（`x ∉ B` 和 `x ∈ B`）
 
+### 範例 4.5：非空子集合的性質（結合反證法和外延性公理）
+
+**定理：** `(A ⊆ B ∧ A ≠ ∅) → B ≠ ∅`
+
+這是一個重要的定理，展示了如何結合反證法和外延性公理來證明集合的非空性。這個證明結合了多種技巧：
+- 反證法（`by_contra`）
+- 等式重寫（`rw`）
+- 外延性公理（`ZFSet.ext`）
+- 從矛盾推出結論（`False.elim`）
+
+**完整證明：**
+
+```lean
+theorem theorem_2_1_3(A B : ZFSet) : (A ⊆ B ∧ A ≠ ∅) → B ≠ ∅ := by
+  -- 引入前提條件
+  intro h -- h: A ⊆ B ∧ A ≠ ∅
+  -- 分解合取命題：hxAB: A ⊆ B, hA_nonempty: A ≠ ∅
+  rcases h with ⟨hxAB, hA_nonempty⟩
+  -- 使用反證法：假設 B = ∅
+  by_contra hB_empty -- hB_empty: B = ∅
+  -- 從 A ⊆ B 和 B = ∅ 推出 A ⊆ ∅
+  have hA_subset_empty : A ⊆ ∅ := by
+    rw [hB_empty] at hxAB -- 將 hxAB 中的 B 替換為 ∅
+    exact hxAB
+  -- 證明 A = ∅（因為 A ⊆ ∅ 意味著 A 沒有元素）
+  have hA_empty : A = ∅ := by
+    -- 使用外延性公理：A = ∅ ↔ (∀ x, x ∈ A ↔ x ∈ ∅)
+    -- 執行 apply ZFSet.ext 後，目標從 "A = ∅" 變成了 "∀ x, x ∈ A ↔ x ∈ ∅"
+    apply ZFSet.ext
+    -- intro x 的作用：引入任意的元素 x
+    -- 要證明 "∀ x, x ∈ A ↔ x ∈ ∅"，我們需要：
+    --   1) 取任意元素 x（intro x）
+    --   2) 證明 "x ∈ A ↔ x ∈ ∅"
+    intro x
+    -- constructor 將雙條件 ↔ 分解成兩個方向：x ∈ A → x ∈ ∅ 和 x ∈ ∅ → x ∈ A
+    constructor
+    · intro hx -- x ∈ A
+      -- 由於 A ⊆ ∅，所以 x ∈ ∅，但空集合沒有元素，這是矛盾的
+      have : x ∈ ∅ := hA_subset_empty hx
+      exact False.elim (ZFSet.notMem_empty x this)
+    · intro hx -- x ∈ ∅
+      -- 空集合沒有元素，x ∈ ∅ 本身就是矛盾的
+      exact False.elim (ZFSet.notMem_empty x hx)
+  -- 推出矛盾：hA_empty : A = ∅ 與 hA_nonempty : A ≠ ∅ 矛盾
+  exact hA_nonempty hA_empty
+```
+
+**詳細步驟解析：**
+
+**步驟 1：引入和分解前提**
+- `intro h`：引入 `A ⊆ B ∧ A ≠ ∅`
+- `rcases h with ⟨hxAB, hA_nonempty⟩`：分解合取，得到 `A ⊆ B` 和 `A ≠ ∅`
+
+**步驟 2：使用反證法**
+- `by_contra hB_empty`：假設 `B = ∅`（要證明 `B ≠ ∅`，所以假設其否定）
+- 目標：推出矛盾
+
+**步驟 3：證明 `A ⊆ ∅`**
+- 因為 `A ⊆ B` 且 `B = ∅`，所以 `A ⊆ ∅`
+- 使用 `rw [hB_empty] at hxAB` 將 `hxAB` 中的 `B` 替換為 `∅`
+- 現在 `hxAB` 變成 `A ⊆ ∅`
+
+**步驟 4：證明 `A = ∅`**
+- 這是證明的關鍵部分，需要使用外延性公理
+- `apply ZFSet.ext`：將 `A = ∅` 轉換為 `∀ x, x ∈ A ↔ x ∈ ∅`
+- `intro x`：引入任意元素 `x`
+- `constructor`：將雙條件分解成兩個方向
+
+**方向 4.1：`x ∈ A → x ∈ ∅`**
+- 如果 `x ∈ A`，因為 `A ⊆ ∅`，所以 `x ∈ ∅`
+- 但空集合沒有元素，這是矛盾的
+- 使用 `False.elim` 從矛盾推出任何結論
+
+**方向 4.2：`x ∈ ∅ → x ∈ A`**
+- 如果 `x ∈ ∅`，這本身就是矛盾的（空集合沒有元素）
+- 使用 `False.elim` 從矛盾推出任何結論
+
+**步驟 5：推出矛盾**
+- 我們證明了 `A = ∅`（`hA_empty`）
+- 但前提有 `A ≠ ∅`（`hA_nonempty`）
+- 這兩個命題矛盾
+- 使用 `exact hA_nonempty hA_empty` 完成證明
+
+**關鍵理解：**
+
+1. **反證法的使用**：
+   - 要證明 `B ≠ ∅`，假設 `B = ∅`
+   - 從這個假設推出矛盾
+   - 因此 `B ≠ ∅` 成立
+
+2. **外延性公理的使用**：
+   - 證明 `A = ∅` 時，使用 `apply ZFSet.ext`
+   - 轉換為證明所有元素的成員關係等價
+   - 兩個方向都從矛盾推出，這是空集合的特性
+
+3. **等式重寫的使用**：
+   - `rw [hB_empty] at hxAB`：在假設中重寫等式
+   - 將 `A ⊆ B` 轉換為 `A ⊆ ∅`
+
+4. **從矛盾推出結論**：
+   - `False.elim`：從 `False` 可以推出任何命題
+   - 這是邏輯中的一個基本原理
+
+**為什麼這個證明很重要？**
+
+1. **展示了多種技巧的結合**：
+   - 反證法
+   - 外延性公理
+   - 等式重寫
+   - 從矛盾推出結論
+
+2. **實際應用**：
+   - 當我們知道 `A ⊆ B` 且 `A` 非空時，可以推出 `B` 非空
+   - 這在證明集合非空性時很有用
+
+3. **邏輯推理**：
+   - 如果 `A` 有元素，且 `A` 的所有元素都在 `B` 中
+   - 則 `B` 也必須有元素（至少 `A` 的元素）
+
+**記憶要點：**
+- 反證法是證明否定命題的重要方法
+- 外延性公理是證明集合相等的標準方法
+- 等式重寫可以改變假設的形式
+- 從矛盾可以推出任何結論（`False.elim`）
+
 ### 範例 5：复杂的外延性證明
 
 ```lean
@@ -1491,6 +2046,598 @@ theorem exercise_2_1_18_a(A B : ZFSet) : A = B ↔ ZFSet.powerset A = ZFSet.powe
    - 利用 `𝒫(A) = 𝒫(B)` 得到 `A ∈ 𝒫(B)`，即 `A ⊆ B`
    - 類似地得到 `B ⊆ A`
    - 使用外延性公理得到 `A = B`
+
+### 範例 6：循環包含關係與集合相等
+
+**定理：** `(A ⊆ B ∧ B ⊆ C ∧ C ⊆ A) → (A = B ∧ B = C)`
+
+這是一個重要的定理，展示了當三個集合形成循環包含關係時，它們必須相等。這個證明展示了：
+- 如何使用傳遞性定理
+- 如何結合多個子集合關係
+- 如何使用外延性公理證明集合相等
+- 如何使用等式重寫
+
+**完整證明：**
+
+```lean
+theorem exercise_2_1_9(A B C : ZFSet) : (A ⊆ B ∧ B ⊆ C ∧ C ⊆ A) → (A = B ∧ B = C) := by
+  intro h -- h: A ⊆ B ∧ B ⊆ C ∧ C ⊆ A
+  rcases h with ⟨hA_subset_B, hB_subset_C, hC_subset_A⟩
+  -- hA_subset_B: A ⊆ B
+  -- hB_subset_C: B ⊆ C
+  -- hC_subset_A: C ⊆ A
+  -- A ⊆ B ∧ B ⊆ C → A ⊆ C
+  have hA_subset_C : A ⊆ C := theorem_2_1_1_c A B C ⟨hA_subset_B, hB_subset_C⟩
+  -- A ⊆ C ∧ C ⊆ A → A = C
+  have hA_eq_C : A = C := by
+    apply ZFSet.ext
+    intro x
+    constructor
+    · exact fun hx => hA_subset_C hx -- hA_subset_C : A ⊆ C，應用到 x 和 hx : x ∈ A 得到 x ∈ C
+    · exact fun hx => hC_subset_A hx -- hC_subset_A : C ⊆ A，應用到 x 和 hx : x ∈ C 得到 x ∈ A
+  -- C ⊆ A ∧ A ⊆ B → C ⊆ B
+  have hC_subset_B : C ⊆ B := theorem_2_1_1_c C A B ⟨hC_subset_A, hA_subset_B⟩
+  -- C ⊆ B ∧ B ⊆ C → B = C
+  have hB_eq_C : B = C := by
+    apply ZFSet.ext
+    intro x
+    constructor
+    · exact fun hx => hB_subset_C hx -- hB_subset_C : B ⊆ C，應用到 x 和 hx : x ∈ B 得到 x ∈ C
+    · exact fun hx => hC_subset_B hx -- hC_subset_B : C ⊆ B，應用到 x 和 hx : x ∈ C 得到 x ∈ B
+  -- A = C ∧ B = C → A = B
+  constructor
+  · -- prove A = B
+    rw [hA_eq_C, hB_eq_C]
+  · -- prove B = C
+    exact hB_eq_C
+```
+
+**詳細步驟解析：**
+
+**步驟 1：引入和分解前提**
+- `intro h`：引入 `A ⊆ B ∧ B ⊆ C ∧ C ⊆ A`
+- `rcases h with ⟨hA_subset_B, hB_subset_C, hC_subset_A⟩`：分解三元合取，得到三個子集合關係
+
+**步驟 2：證明 `A ⊆ C`**
+- 因為 `A ⊆ B` 且 `B ⊆ C`，使用傳遞性定理 `theorem_2_1_1_c` 得到 `A ⊆ C`
+- 使用 `theorem_2_1_1_c A B C ⟨hA_subset_B, hB_subset_C⟩` 構造證明
+
+**步驟 3：證明 `A = C`**
+- 因為 `A ⊆ C` 且 `C ⊆ A`，使用外延性公理證明 `A = C`
+- `apply ZFSet.ext`：將 `A = C` 轉換為 `∀ x, x ∈ A ↔ x ∈ C`
+- `intro x`：引入任意元素 `x`
+- `constructor`：將雙條件分解成兩個方向
+  - 方向 1：`x ∈ A → x ∈ C`，使用 `hA_subset_C`
+  - 方向 2：`x ∈ C → x ∈ A`，使用 `hC_subset_A`
+
+**步驟 4：證明 `C ⊆ B`**
+- 因為 `C ⊆ A` 且 `A ⊆ B`，使用傳遞性定理得到 `C ⊆ B`
+- 使用 `theorem_2_1_1_c C A B ⟨hC_subset_A, hA_subset_B⟩` 構造證明
+
+**步驟 5：證明 `B = C`**
+- 因為 `C ⊆ B` 且 `B ⊆ C`，使用外延性公理證明 `B = C`
+- `apply ZFSet.ext`：將 `B = C` 轉換為 `∀ x, x ∈ B ↔ x ∈ C`
+- `intro x`：引入任意元素 `x`
+- `constructor`：將雙條件分解成兩個方向
+  - 方向 1：`x ∈ B → x ∈ C`，使用 `hB_subset_C`
+  - 方向 2：`x ∈ C → x ∈ B`，使用 `hC_subset_B`
+
+**步驟 6：證明 `A = B` 和 `B = C`**
+- `constructor`：將合取 `A = B ∧ B = C` 分解成兩個部分
+- 第一部分：證明 `A = B`
+  - 使用 `rw [hA_eq_C, hB_eq_C]`：將 `A` 重寫為 `C`，然後將 `C` 重寫為 `B`，得到 `A = B`
+- 第二部分：證明 `B = C`
+  - 直接使用 `exact hB_eq_C`
+
+**關鍵理解：**
+
+1. **循環包含關係的性質**：
+   - 如果 `A ⊆ B`、`B ⊆ C`、`C ⊆ A`，則三個集合必須相等
+   - 這是因為循環包含關係意味著每個集合都是其他集合的子集合
+
+2. **傳遞性的應用**：
+   - 從 `A ⊆ B` 和 `B ⊆ C` 推出 `A ⊆ C`
+   - 從 `C ⊆ A` 和 `A ⊆ B` 推出 `C ⊆ B`
+   - 這展示了傳遞性定理的實際應用
+
+3. **外延性公理的使用**：
+   - 當兩個集合互為子集合時（`A ⊆ C` 且 `C ⊆ A`），它們相等
+   - 使用 `ZFSet.ext` 將集合相等轉換為所有元素的成員關係等價
+
+4. **等式重寫的技巧**：
+   - `rw [hA_eq_C, hB_eq_C]`：鏈式重寫
+   - 先將 `A` 重寫為 `C`，再將 `C` 重寫為 `B`，最終得到 `A = B`
+
+**為什麼這個定理很重要？**
+
+1. **建立循環包含關係的性質**：
+   - 它告訴我們，循環包含關係意味著集合相等
+   - 這在證明集合相等時很有用
+
+2. **實際應用**：
+   - 當我們有三個集合的循環包含關係時，可以推出它們相等
+   - 這簡化了證明過程
+
+3. **邏輯推理**：
+   - 如果 `A ⊆ B`、`B ⊆ C`、`C ⊆ A`，則 `A`、`B`、`C` 有相同的元素
+   - 因此它們相等
+
+**關鍵技巧總結：**
+
+1. **傳遞性定理的應用**：
+   - `theorem_2_1_1_c`：從 `A ⊆ B` 和 `B ⊆ C` 推出 `A ⊆ C`
+   - 可以應用多次來建立新的子集合關係
+
+2. **外延性公理的使用**：
+   - 當兩個集合互為子集合時，使用 `ZFSet.ext` 證明它們相等
+   - 轉換為證明所有元素的成員關係等價
+
+3. **等式重寫的鏈式使用**：
+   - `rw [hA_eq_C, hB_eq_C]`：鏈式重寫多個等式
+   - 這可以簡化證明過程
+
+**記憶要點：**
+- 循環包含關係 `A ⊆ B ∧ B ⊆ C ∧ C ⊆ A` 意味著 `A = B = C`
+- 證明時需要使用傳遞性定理建立新的子集合關係
+- 當兩個集合互為子集合時，使用外延性公理證明它們相等
+- 等式重寫可以鏈式使用來簡化證明
+
+### 範例 7：子集合關係與聯集的保持性
+
+**定理：** `A ⊆ B → A ∪ C ⊆ B ∪ C`
+
+這是一個重要的定理，展示了子集合關係在聯集運算下的保持性。如果 `A` 是 `B` 的子集合，則 `A` 與任意集合 `C` 的聯集也是 `B` 與 `C` 的聯集的子集合。這個證明展示了：
+- 如何使用分情況討論處理聯集
+- 如何應用子集合關係
+- 如何構造聯集成員關係
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_1_q (A B C : ZFSet) : A ⊆ B → A ∪ C ⊆ B ∪ C  := by
+  intro hA_B x hx_union -- hA_B : A ⊆ B, x : any arbitrary element, hx_union : x ∈ A ∪ C
+  -- 目標：證明 x ∈ B ∪ C
+  rw [ZFSet.mem_union] at hx_union -- 將 x ∈ A ∪ C 拆成 x ∈ A ∨ x ∈ C
+  cases hx_union with
+  | inl hx_A => -- 情況1：hx_A : x ∈ A
+    -- 因為 A ⊆ B，所以 x ∈ B
+    have hx_B : x ∈ B := hA_B hx_A -- 應用 hA_B : A ⊆ B 到 hx_A : x ∈ A，得到 x ∈ B
+    -- x ∈ B，所以 x ∈ B ∪ C（用 Or.inl 選擇左分支，因為 x ∈ B 是 x ∈ B ∨ x ∈ C 的左分支）
+    exact ZFSet.mem_union.mpr (Or.inl hx_B)
+  | inr hx_C => -- 情況2：hx_C : x ∈ C
+    -- x ∈ C，所以 x ∈ B ∪ C（用 Or.inr 選擇右分支，因為 x ∈ C 是 x ∈ B ∨ x ∈ C 的右分支）
+    exact ZFSet.mem_union.mpr (Or.inr hx_C)
+```
+
+**詳細步驟解析：**
+
+**步驟 1：引入假設**
+- `intro hA_B x hx_union`：引入 `A ⊆ B`、任意元素 `x` 和 `x ∈ A ∪ C`
+- 目標：證明 `x ∈ B ∪ C`
+
+**步驟 2：分解聯集**
+- `rw [ZFSet.mem_union] at hx_union`：將 `x ∈ A ∪ C` 轉換為 `x ∈ A ∨ x ∈ C`
+- 現在需要分兩種情況討論
+
+**情況 1：`x ∈ A`**
+- 如果 `x ∈ A`，因為 `A ⊆ B`（從假設 `hA_B`），所以 `x ∈ B`
+- 使用 `hA_B hx_A` 應用子集合關係，得到 `hx_B : x ∈ B`
+- 因為 `x ∈ B`，所以 `x ∈ B ∪ C`（用 `Or.inl` 選擇左分支）
+- 使用 `ZFSet.mem_union.mpr (Or.inl hx_B)` 構造聯集成員關係
+
+**情況 2：`x ∈ C`**
+- 如果 `x ∈ C`，則 `x ∈ B ∪ C`（因為 `x ∈ C` 是 `x ∈ B ∨ x ∈ C` 的右分支）
+- 使用 `ZFSet.mem_union.mpr (Or.inr hx_C)` 構造聯集成員關係
+
+**關鍵理解：**
+
+1. **子集合關係的應用**：
+   - `hA_B : A ⊆ B` 是一個函數，可以應用到 `x ∈ A` 得到 `x ∈ B`
+   - 直接使用 `hA_B hx_A` 即可
+
+2. **分情況討論的必要性**：
+   - `x ∈ A ∪ C` 意味著 `x ∈ A` 或 `x ∈ C`
+   - 兩種情況都需要處理
+   - 情況 1 需要使用子集合關係
+   - 情況 2 直接成立
+
+3. **聯集的構造**：
+   - 情況 1：`x ∈ B`，用 `Or.inl` 構造 `x ∈ B ∪ C`
+   - 情況 2：`x ∈ C`，用 `Or.inr` 構造 `x ∈ B ∪ C`
+   - 注意：在 `x ∈ B ∨ x ∈ C` 中，`x ∈ B` 是左分支，`x ∈ C` 是右分支
+
+**為什麼這個定理很重要？**
+
+1. **展示子集合關係的保持性**：
+   - 它告訴我們，子集合關係在聯集運算下是保持的
+   - 如果 `A ⊆ B`，則 `A ∪ C ⊆ B ∪ C` 對任意集合 `C` 都成立
+
+2. **實際應用**：
+   - 當我們需要證明 `A ∪ C ⊆ B ∪ C` 時，可以改為證明 `A ⊆ B`
+   - 這簡化了證明過程
+
+3. **直觀理解**：
+   - 如果 `A` 的所有元素都在 `B` 中
+   - 則 `A` 和 `C` 的聯集的所有元素都在 `B` 和 `C` 的聯集中
+   - 因為 `A` 的元素在 `B` 中，`C` 的元素在 `C` 中
+
+**關鍵技巧總結：**
+
+1. **分情況討論**：
+   - 當有 `x ∈ A ∪ C` 時，使用 `cases` 分兩種情況
+   - 情況 1：`x ∈ A`，需要使用子集合關係
+   - 情況 2：`x ∈ C`，直接構造聯集
+
+2. **子集合關係的應用**：
+   - `hA_B : A ⊆ B` 可以應用到 `x ∈ A` 得到 `x ∈ B`
+   - 直接使用 `hA_B hx_A` 即可
+
+3. **聯集的構造**：
+   - 如果 `x ∈ B`，用 `Or.inl` 構造 `x ∈ B ∪ C`
+   - 如果 `x ∈ C`，用 `Or.inr` 構造 `x ∈ B ∪ C`
+   - 記住：`Or.inl` 用於左分支，`Or.inr` 用於右分支
+
+**與其他定理的對比：**
+
+| 定理 | 形式 | 關鍵差異 |
+|------|------|----------|
+| 聯集交換律 | `A ∪ B = B ∪ A` | 證明集合相等，需要雙方向 |
+| 聯集結合律 | `A ∪ (B ∪ C) = (A ∪ B) ∪ C` | 證明集合相等，需要雙方向 |
+| 子集合保持性 | `A ⊆ B → A ∪ C ⊆ B ∪ C` | 只證明一個方向，使用分情況討論 |
+
+**記憶要點：**
+- `A ⊆ B → A ∪ C ⊆ B ∪ C` 展示了子集合關係在聯集運算下的保持性
+- 證明時需要分情況討論：`x ∈ A` 或 `x ∈ C`
+- 情況 1 需要使用子集合關係，情況 2 直接構造聯集
+- 關鍵是理解如何應用子集合關係和構造聯集成員關係
+
+### 範例 8：子集合關係與交集的保持性
+
+**定理：** `A ⊆ B → A ∩ C ⊆ B ∩ C`
+
+這是範例 7 的對應版本，使用交集而不是聯集。這個定理展示了子集合關係在交集運算下的保持性。如果 `A` 是 `B` 的子集合，則 `A` 與任意集合 `C` 的交集也是 `B` 與 `C` 的交集的子集合。這個證明展示了：
+- 如何分解交集成員關係
+- 如何應用子集合關係
+- 如何構造交集成員關係
+- 與聯集版本的對比
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_1_r (A B C : ZFSet) : A ⊆ B → A ∩ C ⊆ B ∩ C := by 
+  intro hA_B x hx_inter -- hA_B : A ⊆ B, x : any arbitrary element, hx_inter : x ∈ A ∩ C
+  -- 目標：證明 x ∈ B ∩ C
+  have h1 : x ∈ A ∧ x ∈ C := ZFSet.mem_inter.mp hx_inter -- 將 x ∈ A ∩ C 拆成 x ∈ A ∧ x ∈ C（使用 .mp 分解交集成員關係）
+  have hx_B : x ∈ B := hA_B h1.left -- 應用 hA_B : A ⊆ B 到 h1.left : x ∈ A，得到 x ∈ B
+  have hx_C : x ∈ C := h1.right -- 從 x ∈ A ∧ x ∈ C 提取 x ∈ C（使用 .right 提取合取的右部分）
+  exact ZFSet.mem_inter.mpr ⟨hx_B, hx_C⟩ -- x ∈ B ∧ x ∈ C，所以 x ∈ B ∩ C（使用 .mpr 構造交集成員關係）
+```
+
+**詳細步驟解析：**
+
+**步驟 1：引入假設**
+- `intro hA_B x hx_inter`：引入 `A ⊆ B`、任意元素 `x` 和 `x ∈ A ∩ C`
+- 目標：證明 `x ∈ B ∩ C`
+
+**步驟 2：分解交集成員關係**
+- `ZFSet.mem_inter.mp hx_inter`：將 `x ∈ A ∩ C` 轉換為 `x ∈ A ∧ x ∈ C`
+- 使用 `.mp` 分解交集成員關係，得到合取 `h1 : x ∈ A ∧ x ∈ C`
+
+**步驟 3：提取合取的部分**
+- `h1.left`：從 `x ∈ A ∧ x ∈ C` 提取 `x ∈ A`
+- `h1.right`：從 `x ∈ A ∧ x ∈ C` 提取 `x ∈ C`
+- 現在我們有：`x ∈ A` 和 `x ∈ C`
+
+**步驟 4：應用子集合關係**
+- `hA_B h1.left`：應用 `hA_B : A ⊆ B` 到 `h1.left : x ∈ A`，得到 `hx_B : x ∈ B`
+- 因為 `A ⊆ B` 且 `x ∈ A`，所以 `x ∈ B`
+
+**步驟 5：構造交集成員關係**
+- 現在我們有：`hx_B : x ∈ B` 和 `hx_C : x ∈ C`
+- 使用 `⟨hx_B, hx_C⟩` 構造合取 `x ∈ B ∧ x ∈ C`
+- 使用 `ZFSet.mem_inter.mpr` 將合取轉換為交集成員關係 `x ∈ B ∩ C`
+
+**關鍵理解：**
+
+1. **交集的分解**：
+   - `x ∈ A ∩ C` 意味著 `x ∈ A` 且 `x ∈ C`
+   - 使用 `ZFSet.mem_inter.mp` 分解交集成員關係
+   - 然後使用 `.left` 和 `.right` 提取單個成員關係
+
+2. **子集合關係的應用**：
+   - `hA_B : A ⊆ B` 可以應用到 `x ∈ A` 得到 `x ∈ B`
+   - 直接使用 `hA_B h1.left` 即可
+
+3. **交集的構造**：
+   - 需要同時證明 `x ∈ B` 和 `x ∈ C`
+   - 使用 `⟨hx_B, hx_C⟩` 構造合取
+   - 使用 `ZFSet.mem_inter.mpr` 轉換為交集成員關係
+
+**為什麼這個定理很重要？**
+
+1. **展示子集合關係的保持性**：
+   - 它告訴我們，子集合關係在交集運算下也是保持的
+   - 如果 `A ⊆ B`，則 `A ∩ C ⊆ B ∩ C` 對任意集合 `C` 都成立
+
+2. **實際應用**：
+   - 當我們需要證明 `A ∩ C ⊆ B ∩ C` 時，可以改為證明 `A ⊆ B`
+   - 這簡化了證明過程
+
+3. **直觀理解**：
+   - 如果 `A` 的所有元素都在 `B` 中
+   - 則 `A` 和 `C` 的交集的所有元素都在 `B` 和 `C` 的交集中
+   - 因為 `A ∩ C` 的元素必須同時在 `A` 和 `C` 中，而 `A` 的元素都在 `B` 中
+
+**關鍵技巧總結：**
+
+1. **交集的分解**：
+   - 使用 `ZFSet.mem_inter.mp` 將 `x ∈ A ∩ C` 轉換為 `x ∈ A ∧ x ∈ C`
+   - 使用 `.left` 和 `.right` 提取單個成員關係
+
+2. **子集合關係的應用**：
+   - `hA_B : A ⊆ B` 可以應用到 `x ∈ A` 得到 `x ∈ B`
+   - 直接使用 `hA_B h1.left` 即可
+
+3. **交集的構造**：
+   - 需要同時證明 `x ∈ B` 和 `x ∈ C`
+   - 使用 `⟨hx_B, hx_C⟩` 構造合取
+   - 使用 `ZFSet.mem_inter.mpr` 轉換為交集成員關係
+
+**與聯集版本的對比：**
+
+| 特性 | 聯集版本 | 交集版本 |
+|------|----------|----------|
+| 定理 | `A ⊆ B → A ∪ C ⊆ B ∪ C` | `A ⊆ B → A ∩ C ⊆ B ∩ C` |
+| 證明方法 | 分情況討論（`cases`） | 直接分解和構造 |
+| 複雜度 | 需要處理兩種情況 | 只需要一個流程 |
+| 關鍵步驟 | `cases` + `Or.inl`/`Or.inr` | `.mp` + `.left`/`.right` + `.mpr` |
+
+**為什麼交集版本更簡單？**
+
+1. **不需要分情況討論**：
+   - 聯集版本需要分 `x ∈ A` 或 `x ∈ C` 兩種情況
+   - 交集版本直接從 `x ∈ A ∩ C` 得到 `x ∈ A` 和 `x ∈ C`
+
+2. **直接提取**：
+   - 從 `x ∈ A ∩ C` 可以直接提取 `x ∈ A` 和 `x ∈ C`
+   - 不需要考慮多種可能性
+
+3. **構造更直接**：
+   - 只需要證明 `x ∈ B` 和 `x ∈ C`，然後構造交集
+   - 不需要選擇分支（`Or.inl`/`Or.inr`）
+
+**記憶要點：**
+- `A ⊆ B → A ∩ C ⊆ B ∩ C` 展示了子集合關係在交集運算下的保持性
+- 證明時不需要分情況討論，直接分解交集即可
+- 關鍵步驟：分解交集 → 應用子集合關係 → 構造交集
+- 交集版本比聯集版本更簡單，因為不需要分情況討論
+
+### 範例 9：補集合的定義
+
+**定義：** 設 `U` 為全域集合，`A ⊆ U`。`A` 的補集合 `Aᶜ` 定義為 `U - A`
+
+補集合是集合論中的一個重要概念，它表示在全域集合 `U` 中不屬於 `A` 的所有元素。這個定義展示了：
+- 補集合與差集合的關係
+- 補集合的成員關係
+- 如何使用差集合來表示補集合
+
+**完整證明：**
+
+```lean
+-- Definition Let U be the universe and A ⊆ U. The complement of A is the set Aᶜ = U - A
+-- 補集合的定義：相對於全域集合 U，A 的補集合定義為 U - A
+-- 這個定理展示補集合的成員關係：x ∈ compl U A ↔ x ∈ U ∧ x ∉ A
+-- 使用新定義的 compl 函數和 mem_compl 定理
+theorem definition_2_2_1_a (U A x : ZFSet) : x ∈ compl U A ↔ x ∈ U ∧ x ∉ A := by
+  exact mem_compl U A x -- 根據補集合的定義 mem_compl，x ∈ compl U A ↔ x ∈ U ∧ x ∉ A
+```
+
+**詳細步驟解析：**
+
+**步驟 1：理解補集合的定義**
+- 補集合 `compl U A` 定義為 `set_diff U A`（即 `U - A`）
+- 補集合的成員關係：`x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
+
+**步驟 2：使用補集合的定義**
+- `mem_compl U A x` 是補集合的定義：`x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
+- 直接使用 `mem_compl` 即可完成證明
+
+**關鍵理解：**
+
+1. **補集合與差集合的關係**：
+   - 補集合 `compl U A` 定義為差集合 `set_diff U A`（即 `U - A`）
+   - 補集合的成員關係與差集合完全相同：`mem_compl U A x = mem_diff U A x`
+
+2. **補集合的成員關係**：
+   - `x ∈ compl U A` 當且僅當 `x ∈ U` 且 `x ∉ A`
+   - 這意味著補集合包含所有在全域集合中但不屬於 `A` 的元素
+
+3. **定義的簡潔性**：
+   - 補集合使用 `compl` 函數定義，實際上是差集合的特殊情況
+   - 使用 `mem_compl` 來處理補集合的成員關係
+
+**為什麼這個定義很重要？**
+
+1. **建立補集合的概念**：
+   - 它告訴我們補集合是什麼
+   - 補集合是相對於全域集合定義的
+
+2. **實際應用**：
+   - 當我們需要表示「不屬於 `A` 的元素」時，可以使用補集合
+   - 補集合在邏輯運算和集合運算中都有重要應用
+
+3. **直觀理解**：
+   - 補集合就像「反面」或「補充」
+   - 如果 `A` 是某個性質的集合，那麼 `Aᶜ` 就是不滿足該性質的集合
+
+**關鍵技巧總結：**
+
+1. **補集合的定義**：
+   - 補集合 `compl U A` 定義為 `set_diff U A`（即 `U - A`）
+   - 補集合的成員關係：`x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
+
+2. **使用補集合函數**：
+   - 使用 `compl U A` 來表示補集合
+   - 使用 `mem_compl` 來處理補集合的成員關係
+
+3. **簡潔的證明**：
+   - 因為補集合定義為差集合，所以證明很簡單
+   - 直接使用 `mem_compl` 即可
+
+**與差集合的對比：**
+
+| 特性 | 差集合 | 補集合 |
+|------|--------|--------|
+| 定義 | `set_diff A B = {x ∈ A : x ∉ B}` | `compl U A = set_diff U A` |
+| 成員關係 | `x ∈ set_diff A B ↔ x ∈ A ∧ x ∉ B` | `x ∈ compl U A ↔ x ∈ U ∧ x ∉ A` |
+| 函數 | `set_diff` | `compl` |
+| 定理 | `mem_diff` | `mem_compl` |
+| 關係 | 通用概念 | 差集合的特殊情況（相對於全域集合） |
+
+**記憶要點：**
+- 補集合 `compl U A` 定義為 `set_diff U A`（即 `U - A`），其中 `U` 是全域集合
+- 補集合的成員關係：`x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
+- 使用 `mem_compl` 來處理補集合的成員關係
+- 補集合是差集合的特殊情況，所以可以使用差集合的性質
+- 補集合在邏輯運算和集合運算中都有重要應用
+
+### 範例 10：雙重補集合定理
+
+**定理：** `(Aᶜ)ᶜ = A`，即 `compl U (compl U A) = A`
+
+這是一個重要的補集合性質，展示了補集合的「雙重否定」特性。對一個集合取兩次補集合會回到原集合。這個證明展示了：
+- 如何使用外延性公理證明集合相等
+- 如何使用反證法證明否定命題
+- 如何結合補集合的定義和子集合關係
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_2_a (U A : ZFSet) (hA_subset_U : A ⊆ U) : compl U (compl U A) = A := by
+  apply ZFSet.ext -- 根據外延性公設，將 compl U (compl U A) = A 轉換為 ∀ x, x ∈ compl U (compl U A) ↔ x ∈ A
+  intro x -- x : any arbitrary element
+  constructor -- 將 ↔ 分成兩個部分
+  · intro hx_compl_compl -- hx_compl_compl : x ∈ compl U (compl U A)
+    -- x ∈ compl U (compl U A) → x ∈ A
+    have h1 : x ∈ U ∧ x ∉ compl U A := (mem_compl U (compl U A) x).mp hx_compl_compl -- 將 x ∈ compl U (compl U A) 拆成 x ∈ U ∧ x ∉ compl U A（使用 .mp 分解補集合成員關係）
+    by_contra hx_not_in_A -- 假設 x ∉ A（要證明 x ∈ A，所以假設其否定）
+    have hx_in_compl : x ∈ compl U A := (mem_compl U A x).mpr ⟨h1.left, hx_not_in_A⟩ -- 將 x ∈ U ∧ x ∉ A 轉換為 x ∈ compl U A（使用 .mpr 構造補集合成員關係）
+    exact h1.right hx_in_compl -- 矛盾：x ∉ compl U A（從 h1.right）和 x ∈ compl U A（從 hx_in_compl）
+  · intro hx_A -- hx_A : x ∈ A
+    -- x ∈ A → x ∈ compl U (compl U A)
+    have hx_in_U : x ∈ U := hA_subset_U hx_A -- 因為 A ⊆ U 且 x ∈ A，所以 x ∈ U（應用子集合關係）
+    -- 要證明 x ∈ compl U (compl U A)，需要證明 x ∈ U ∧ x ∉ compl U A
+    -- 我們已經有 x ∈ U（從 hx_in_U），現在需要證明 x ∉ compl U A
+    have hx_not_compl : x ∉ compl U A := by -- 證明 x ∉ compl U A
+      by_contra hx_in_compl -- 假設 x ∈ compl U A（要證明 x ∉ compl U A，所以假設其否定）
+      have h2 : x ∈ U ∧ x ∉ A := (mem_compl U A x).mp hx_in_compl -- 將 x ∈ compl U A 拆成 x ∈ U ∧ x ∉ A（使用 .mp 分解補集合成員關係）
+      exact h2.right hx_A -- 矛盾：x ∉ A（從 h2.right）和 x ∈ A（從 hx_A）
+    exact (mem_compl U (compl U A) x).mpr ⟨hx_in_U, hx_not_compl⟩ -- 將 x ∈ U ∧ x ∉ compl U A 轉換為 x ∈ compl U (compl U A)（使用 .mpr 構造補集合成員關係）
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`x ∈ compl U (compl U A) → x ∈ A`
+
+**目標：** 證明如果 `x ∈ compl U (compl U A)`，則 `x ∈ A`
+
+**步驟 1：分解補集合成員關係**
+- `(mem_compl U (compl U A) x).mp hx_compl_compl`：將 `x ∈ compl U (compl U A)` 轉換為 `x ∈ U ∧ x ∉ compl U A`
+- 現在我們有：`x ∈ U` 和 `x ∉ compl U A`
+
+**步驟 2：使用反證法**
+- `by_contra hx_not_in_A`：假設 `x ∉ A`（要證明 `x ∈ A`，所以假設其否定）
+- 目標：推出矛盾
+
+**步驟 3：構造補集合成員關係**
+- 如果 `x ∉ A` 且 `x ∈ U`，則 `x ∈ compl U A`
+- 使用 `(mem_compl U A x).mpr ⟨h1.left, hx_not_in_A⟩` 構造
+
+**步驟 4：推出矛盾**
+- 我們有：`x ∉ compl U A`（從 `h1.right`）
+- 我們有：`x ∈ compl U A`（從 `hx_in_compl`）
+- 這兩個命題矛盾
+- 因此 `x ∈ A` 成立
+
+**關鍵理解：**
+- 如果 `x ∈ compl U (compl U A)`，則 `x ∉ compl U A`
+- 如果 `x ∉ A`，則 `x ∈ compl U A`（因為 `x ∈ U`）
+- 這兩個條件矛盾，所以 `x ∈ A`
+
+#### 第二個方向：`x ∈ A → x ∈ compl U (compl U A)`
+
+**目標：** 證明如果 `x ∈ A`，則 `x ∈ compl U (compl U A)`
+
+**步驟 1：應用子集合關係**
+- `hA_subset_U hx_A`：因為 `A ⊆ U` 且 `x ∈ A`，所以 `x ∈ U`
+- 現在我們有：`x ∈ U` 和 `x ∈ A`
+
+**步驟 2：證明 `x ∉ compl U A`**
+- 要證明 `x ∈ compl U (compl U A)`，需要 `x ∈ U` 和 `x ∉ compl U A`
+- 我們已經有 `x ∈ U`，現在需要證明 `x ∉ compl U A`
+- 使用 `have hx_not_compl : x ∉ compl U A := by` 開始證明
+
+**步驟 3：使用反證法證明 `x ∉ compl U A`**
+- `by_contra hx_in_compl`：假設 `x ∈ compl U A`（要證明 `x ∉ compl U A`，所以假設其否定）
+- 目標：推出矛盾
+
+**步驟 4：分解補集合成員關係**
+- `(mem_compl U A x).mp hx_in_compl`：將 `x ∈ compl U A` 轉換為 `x ∈ U ∧ x ∉ A`
+- 現在我們有：`x ∉ A`（從 `h2.right`）
+
+**步驟 5：推出矛盾**
+- 我們有：`x ∉ A`（從 `h2.right`）
+- 我們有：`x ∈ A`（從 `hx_A`）
+- 這兩個命題矛盾
+- 因此 `x ∉ compl U A` 成立
+
+**步驟 6：構造補集合成員關係**
+- 現在我們有：`x ∈ U` 和 `x ∉ compl U A`
+- 使用 `(mem_compl U (compl U A) x).mpr ⟨hx_in_U, hx_not_compl⟩` 構造 `x ∈ compl U (compl U A)`
+
+**關鍵理解：**
+- 如果 `x ∈ A`，則 `x ∉ compl U A`（因為補集合的元素都不在 `A` 中）
+- 因此 `x ∈ compl U (compl U A)`（因為 `x ∈ U` 且 `x ∉ compl U A`）
+
+**為什麼這個定理很重要？**
+
+1. **展示補集合的雙重否定性質**：
+   - 它告訴我們，對一個集合取兩次補集合會回到原集合
+   - 這類似於邏輯中的雙重否定：`¬¬P = P`
+
+2. **實際應用**：
+   - 當我們需要證明 `A = B` 時，可以改為證明 `(Aᶜ)ᶜ = (Bᶜ)ᶜ`
+   - 這在處理補集合相關的證明時很有用
+
+3. **直觀理解**：
+   - 補集合是「反面」，取兩次反面就回到正面
+   - 如果 `A` 是「滿足某性質的集合」，那麼 `Aᶜ` 是「不滿足該性質的集合」，`(Aᶜ)ᶜ` 又是「滿足該性質的集合」，即 `A`
+
+**關鍵技巧總結：**
+
+1. **外延性公理的使用**：
+   - 證明集合相等時，使用 `apply ZFSet.ext`
+   - 轉換為證明所有元素的成員關係等價
+
+2. **反證法的使用**：
+   - 兩個方向都使用反證法
+   - 第一個方向：假設 `x ∉ A`，推出 `x ∈ compl U A`，與 `x ∉ compl U A` 矛盾
+   - 第二個方向：假設 `x ∈ compl U A`，推出 `x ∉ A`，與 `x ∈ A` 矛盾
+
+3. **補集合的分解和構造**：
+   - 使用 `mem_compl.mp` 分解補集合成員關係
+   - 使用 `mem_compl.mpr` 構造補集合成員關係
+
+4. **子集合關係的應用**：
+   - `hA_subset_U : A ⊆ U` 可以應用到 `x ∈ A` 得到 `x ∈ U`
+   - 這是證明第二個方向的關鍵
+
+**記憶要點：**
+- `(Aᶜ)ᶜ = A` 展示了補集合的雙重否定性質
+- 證明時需要使用外延性公理和反證法
+- 兩個方向都使用反證法來證明否定命題
+- 需要假設 `A ⊆ U` 來確保 `x ∈ A` 時有 `x ∈ U`
+- 補集合的定義：`x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
 
 ---
 
