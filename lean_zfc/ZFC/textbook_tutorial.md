@@ -90,19 +90,107 @@ theorem example2 (A B : ZFSet) : (A ⊆ B) → (A ⊆ B) := by
 
 ### 2. `exact` - 直接完成證明
 
-**作用：** 當目標正好等於某個已有的假設或定理時，直接使用它完成證明。
+**作用：** `exact` 是 Lean 中最直接的證明策略。當你已經有一個表達式，它的類型正好等於當前的證明目標時，可以使用 `exact` 直接完成證明。
+
+**核心概念：**
+- `exact` 要求提供的表達式**完全匹配**目標的類型
+- 如果表達式的類型與目標類型完全一致，證明就完成了
+- 這是最簡單、最直接的證明方式
 
 **語法：**
 ```lean
 exact 表達式
 ```
 
-**範例：**
+**什麼時候使用 `exact`？**
+
+1. **當假設正好是目標時**：
+   ```lean
+   theorem example1 (A B : ZFSet) : (A ⊆ B) → (A ⊆ B) := by
+     intro h  -- 引入前提 A ⊆ B 作為假設 h
+     exact h   -- h 的類型正好是目標 A ⊆ B，直接使用
+   ```
+
+2. **當目標是某個假設的一部分時**：
+   ```lean
+   theorem example2 (A : ZFSet) : A ⊆ A := by
+     intro x hx  -- 目標變成：證明 x ∈ A
+     exact hx     -- hx : x ∈ A 正好是目標，直接使用
+   ```
+
+3. **當目標是通過構造函數得到的合取或析取時**：
+   ```lean
+   theorem example3 (A B : ZFSet) (hA : A ⊆ B) (hB : B ⊆ A) : A = B := by
+     apply ZFSet.ext
+     intro x
+     constructor
+     · exact hA  -- hA : A ⊆ B，可以應用到 x ∈ A 得到 x ∈ B
+     · exact hB  -- hB : B ⊆ A，可以應用到 x ∈ B 得到 x ∈ A
+   ```
+
+4. **當目標是通過 `have` 建立的中間結果時**：
+   ```lean
+   theorem example4 (A B C : ZFSet) : A ⊆ B → A ⊆ C := by
+     intro hAB
+     have hBC : B ⊆ C := sorry  -- 假設我們已經證明了 B ⊆ C
+     intro x hx_A
+     have hx_B : x ∈ B := hAB hx_A  -- 因為 A ⊆ B 且 x ∈ A，所以 x ∈ B
+     exact hBC hx_B  -- hBC hx_B 的類型是 x ∈ C，正好是目標
+   ```
+
+**`exact` vs `apply` 的區別：**
+
+- **`exact`**：表達式的類型必須**完全匹配**目標類型
+  ```lean
+  -- 目標：x ∈ B
+  -- h : x ∈ B
+  exact h  -- ✅ 完全匹配，直接完成
+  ```
+
+- **`apply`**：表達式的類型是目標類型的**函數**，需要應用後才能匹配
+  ```lean
+  -- 目標：x ∈ B
+  -- h : A ⊆ B
+  apply h  -- ✅ h 是函數類型，應用後得到 x ∈ B
+  -- 現在需要證明：x ∈ A
+  ```
+
+**常見錯誤：**
+
+1. **類型不匹配**：
+   ```lean
+   -- 目標：x ∈ B
+   -- h : x ∈ A
+   exact h  -- ❌ 錯誤：類型不匹配，x ∈ A ≠ x ∈ B
+   ```
+
+2. **缺少參數**：
+   ```lean
+   -- 目標：x ∈ B
+   -- h : A ⊆ B
+   exact h  -- ❌ 錯誤：h 是函數類型，需要參數
+   -- 應該使用：exact h hx_A（其中 hx_A : x ∈ A）
+   ```
+
+**實際範例：**
+
 ```lean
-theorem example3 (A : ZFSet) : A ⊆ A := by
-  intro x hx
-  exact hx  -- hx 正好是目標 x ∈ A
+theorem example5 (A B : ZFSet) : A ⊆ A := by
+  intro x hx  -- 引入任意元素 x 和假設 x ∈ A
+  -- 目標：證明 x ∈ A
+  exact hx    -- hx 的類型正好是 x ∈ A，直接完成證明
 ```
+
+**詳細說明：**
+- 開始時目標是 `A ⊆ A`，即 `∀ x, x ∈ A → x ∈ A`
+- `intro x hx` 引入 `x` 和 `hx : x ∈ A`，目標變成 `x ∈ A`
+- `exact hx` 直接使用假設 `hx`，因為它的類型正好是目標 `x ∈ A`
+
+**記憶要點：**
+- `exact` 用於當表達式的類型**完全匹配**目標時
+- 如果類型不匹配，需要使用 `apply`、`rw` 或其他策略
+- `exact` 是最簡單的證明方式，但要求類型完全一致
+- 當目標是假設本身或假設的直接應用結果時，通常可以使用 `exact`
 
 ### 3. `have` - 宣告中間步驟
 
@@ -2638,6 +2726,1640 @@ theorem theorem_2_2_2_a (U A : ZFSet) (hA_subset_U : A ⊆ U) : compl U (compl U
 - 兩個方向都使用反證法來證明否定命題
 - 需要假設 `A ⊆ U` 來確保 `x ∈ A` 時有 `x ∈ U`
 - 補集合的定義：`x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
+
+---
+
+### 範例 11：聯集與補集合的關係
+
+**定理：** `A ∪ Aᶜ = U`，即 `A ∪ compl U A = U`
+
+這個定理說明了一個集合和它的補集合的聯集等於全域集合。這是一個重要的補集合性質，展示了補集合的「完整性」：任何元素要麼在 `A` 中，要麼在 `Aᶜ` 中（相對於全域集合 `U`）。
+
+這個證明展示了：
+- 如何使用 `cases` 處理析取（`∨`）
+- 如何使用 `by_cases` 進行分情況討論
+- 如何使用管道操作符 `|>` 簡化表達式
+- 如何結合補集合的定義和子集合關係
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_2_b (U A : ZFSet) (hA_subset_U : A ⊆ U) : A ∪ compl U A = U := by
+  apply ZFSet.ext -- 根據外延性公設，將 A ∪ compl U A = U 轉換為 ∀ x, x ∈ A ∪ compl U A ↔ x ∈ U
+  intro x -- x : any arbitrary element
+  constructor -- 將 ↔ 分成兩個部分
+  · intro hx_union -- hx_union : x ∈ A ∪ compl U A
+    -- x ∈ A ∪ compl U A → x ∈ U
+    rw [ZFSet.mem_union] at hx_union -- 將 x ∈ A ∪ compl U A 拆成 x ∈ A ∨ x ∈ compl U A
+    cases hx_union with
+    | inl hx_A => exact hA_subset_U hx_A -- 情況1：x ∈ A，因為 A ⊆ U，所以 x ∈ U
+    | inr hx_compl => exact (mem_compl U A x).mp hx_compl |>.left -- 情況2：x ∈ compl U A，根據 mem_compl 得到 x ∈ U ∧ x ∉ A，提取 x ∈ U
+  · intro hx_U -- hx_U : x ∈ U
+    -- x ∈ U → x ∈ A ∪ compl U A
+    by_cases hx_A : x ∈ A -- 分情況：x ∈ A 或 x ∉ A
+    · exact ZFSet.mem_union.mpr (Or.inl hx_A) -- 情況1：x ∈ A，所以 x ∈ A ∪ compl U A（用 Or.inl 選擇左分支）
+    · exact ZFSet.mem_union.mpr (Or.inr ((mem_compl U A x).mpr ⟨hx_U, hx_A⟩)) -- 情況2：x ∉ A，因為 x ∈ U ∧ x ∉ A，所以 x ∈ compl U A，因此 x ∈ A ∪ compl U A
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`x ∈ A ∪ compl U A → x ∈ U`
+
+**目標：** 證明如果 `x ∈ A ∪ compl U A`，則 `x ∈ U`
+
+**步驟 1：分解聯集成員關係**
+- `rw [ZFSet.mem_union] at hx_union`：將 `x ∈ A ∪ compl U A` 轉換為 `x ∈ A ∨ x ∈ compl U A`
+- 現在我們需要處理這個析取（`∨`）
+
+**步驟 2：使用 `cases` 處理析取**
+- `cases hx_union with`：將析取分成兩個情況
+- `| inl hx_A`：情況 1，`x ∈ A`
+- `| inr hx_compl`：情況 2，`x ∈ compl U A`
+
+**步驟 3：處理情況 1（`x ∈ A`）**
+- `hx_A : x ∈ A`：我們有 `x ∈ A`
+- `hA_subset_U hx_A`：因為 `A ⊆ U` 且 `x ∈ A`，所以 `x ∈ U`
+- 這完成了情況 1 的證明
+
+**步驟 4：處理情況 2（`x ∈ compl U A`）**
+- `hx_compl : x ∈ compl U A`：我們有 `x ∈ compl U A`
+- `(mem_compl U A x).mp hx_compl`：根據補集合的定義，將 `x ∈ compl U A` 轉換為 `x ∈ U ∧ x ∉ A`
+- `|>.left`：使用管道操作符提取合取（`∧`）的左側部分，即 `x ∈ U`
+- 這完成了情況 2 的證明
+
+**關鍵理解：**
+- 如果 `x ∈ A`，因為 `A ⊆ U`，所以 `x ∈ U`
+- 如果 `x ∈ compl U A`，根據補集合的定義，`x ∈ U ∧ x ∉ A`，所以 `x ∈ U`
+- 無論哪種情況，都有 `x ∈ U`
+
+#### 第二個方向：`x ∈ U → x ∈ A ∪ compl U A`
+
+**目標：** 證明如果 `x ∈ U`，則 `x ∈ A ∪ compl U A`
+
+**步驟 1：分情況討論**
+- `by_cases hx_A : x ∈ A`：將問題分成兩個情況：`x ∈ A` 或 `x ∉ A`
+- 這是經典的「要麼在集合中，要麼不在集合中」的邏輯
+
+**步驟 2：處理情況 1（`x ∈ A`）**
+- `hx_A : x ∈ A`：我們有 `x ∈ A`
+- `Or.inl hx_A`：構造析取 `x ∈ A ∨ x ∈ compl U A` 的左分支
+- `ZFSet.mem_union.mpr (Or.inl hx_A)`：將析取轉換為聯集成員關係 `x ∈ A ∪ compl U A`
+- 這完成了情況 1 的證明
+
+**步驟 3：處理情況 2（`x ∉ A`）**
+- `hx_A : x ∉ A`：我們有 `x ∉ A`（注意這裡 `hx_A` 是 `¬(x ∈ A)`）
+- `hx_U : x ∈ U`：我們有 `x ∈ U`
+- `⟨hx_U, hx_A⟩`：構造合取 `x ∈ U ∧ x ∉ A`
+- `(mem_compl U A x).mpr ⟨hx_U, hx_A⟩`：根據補集合的定義，將 `x ∈ U ∧ x ∉ A` 轉換為 `x ∈ compl U A`
+- `Or.inr ...`：構造析取 `x ∈ A ∨ x ∈ compl U A` 的右分支
+- `ZFSet.mem_union.mpr (Or.inr ...)`：將析取轉換為聯集成員關係 `x ∈ A ∪ compl U A`
+- 這完成了情況 2 的證明
+
+**關鍵理解：**
+- 如果 `x ∈ A`，則 `x ∈ A ∪ compl U A`（因為 `x` 在聯集的左側）
+- 如果 `x ∉ A` 且 `x ∈ U`，則 `x ∈ compl U A`，所以 `x ∈ A ∪ compl U A`（因為 `x` 在聯集的右側）
+- 無論哪種情況，都有 `x ∈ A ∪ compl U A`
+
+**為什麼這個定理很重要？**
+
+1. **展示補集合的完整性**：
+   - 它告訴我們，任何元素（相對於全域集合 `U`）要麼在 `A` 中，要麼在 `Aᶜ` 中
+   - 這類似於邏輯中的排中律：`P ∨ ¬P`
+
+2. **實際應用**：
+   - 當我們需要證明某個元素屬於全域集合時，可以證明它屬於 `A` 或 `Aᶜ`
+   - 這在處理補集合相關的證明時很有用
+
+3. **直觀理解**：
+   - 補集合是「反面」，一個集合和它的反面合起來就是全部
+   - 如果 `A` 是「滿足某性質的集合」，那麼 `Aᶜ` 是「不滿足該性質的集合」，兩者的聯集就是所有可能的元素
+
+**關鍵技巧總結：**
+
+1. **`cases` 的使用**：
+   - 當我們有析取（`∨`）時，使用 `cases` 分成兩個情況
+   - `inl` 表示左分支，`inr` 表示右分支
+
+2. **`by_cases` 的使用**：
+   - 當我們需要分情況討論時，使用 `by_cases`
+   - 這會自動處理兩種情況：命題成立和命題不成立
+
+3. **管道操作符 `|>` 的使用**：
+   - `|>` 是 Lean 4 的管道操作符，類似於函數式編程中的管道
+   - `expr |> f` 等價於 `f expr`
+   - `expr |> f |> g` 等價於 `g (f expr)`
+   - 在這個證明中，`(mem_compl U A x).mp hx_compl |>.left` 等價於 `((mem_compl U A x).mp hx_compl).left`
+   - 這讓代碼更易讀，因為我們可以「從左到右」閱讀：先應用 `.mp`，然後提取 `.left`
+
+4. **補集合的分解和構造**：
+   - 使用 `mem_compl.mp` 分解補集合成員關係
+   - 使用 `mem_compl.mpr` 構造補集合成員關係
+
+5. **子集合關係的應用**：
+   - `hA_subset_U : A ⊆ U` 可以應用到 `x ∈ A` 得到 `x ∈ U`
+   - 這是證明第一個方向的關鍵
+
+**關於 `|>.left` 語法的詳細解釋：**
+
+`|>` 是 Lean 4 的**管道操作符**（pipe operator），它允許我們以更直觀的方式鏈式調用函數。
+
+**基本語法：**
+```lean
+expr |> f        -- 等價於 f expr
+expr |> f |> g   -- 等價於 g (f expr)
+```
+
+**在我們的證明中：**
+```lean
+(mem_compl U A x).mp hx_compl |>.left
+```
+
+**等價寫法：**
+```lean
+((mem_compl U A x).mp hx_compl).left
+```
+
+**逐步分解：**
+1. `mem_compl U A x`：補集合的定義，類型為 `x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
+2. `(mem_compl U A x).mp`：提取左到右的方向，類型為 `x ∈ compl U A → x ∈ U ∧ x ∉ A`
+3. `(mem_compl U A x).mp hx_compl`：應用函數，得到 `x ∈ U ∧ x ∉ A`（類型為合取）
+4. `|>.left`：提取合取的左側部分，得到 `x ∈ U`
+
+**為什麼使用 `|>`？**
+
+1. **可讀性**：`expr |> f |> g` 比 `g (f expr)` 更容易閱讀，因為我們可以「從左到右」閱讀
+2. **鏈式調用**：當有多個函數調用時，`|>` 讓代碼更清晰
+3. **函數式風格**：這是函數式編程的常見模式
+
+**更多範例：**
+```lean
+-- 範例 1：簡單的管道
+hx |>.left  -- 等價於 hx.left
+
+-- 範例 2：鏈式管道
+hx |> f |>.left |>.right  -- 等價於 (f hx).left.right
+
+-- 範例 3：在我們的證明中
+(mem_compl U A x).mp hx_compl |>.left
+-- 等價於
+((mem_compl U A x).mp hx_compl).left
+```
+
+**記憶要點：**
+- `A ∪ Aᶜ = U` 展示了補集合的完整性
+- 證明時需要使用外延性公理、`cases` 和 `by_cases`
+- 第一個方向：如果 `x ∈ A ∪ compl U A`，則 `x ∈ U`（兩種情況）
+- 第二個方向：如果 `x ∈ U`，則 `x ∈ A ∪ compl U A`（兩種情況）
+- 需要假設 `A ⊆ U` 來確保 `x ∈ A` 時有 `x ∈ U`
+- 補集合的定義：`x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
+- `|>` 是管道操作符，`expr |> f` 等價於 `f expr`
+- `|>.left` 提取合取的左側部分
+
+---
+
+### 範例 12：交集與補集合的關係
+
+**定理：** `A ∩ Aᶜ = ∅`，即 `A ∩ compl U A = ∅`
+
+這個定理說明了一個集合和它的補集合的交集是空集合。這是一個重要的補集合性質，展示了補集合的「互斥性」：任何元素不能同時在 `A` 中和 `Aᶜ` 中。
+
+這個證明展示了：
+- 如何使用反證法推出矛盾
+- 如何結合交集的定義和補集合的定義
+- 如何使用 `False.elim` 從矛盾推出任何命題
+- 如何處理空真命題（從 `x ∈ ∅` 推出任何命題）
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_2_c (U A : ZFSet) : A ∩ compl U A = ∅ := by
+  apply ZFSet.ext -- 根據外延性公設，將 A ∩ compl U A = ∅ 轉換為 ∀ x, x ∈ A ∩ compl U A ↔ x ∈ ∅
+  intro x -- x : any arbitrary element
+  constructor -- 將 ↔ 分成兩個部分
+  · intro hx_inter -- hx_inter : x ∈ A ∩ compl U A
+    -- x ∈ A ∩ compl U A → x ∈ ∅
+    have hx_pair : x ∈ A ∧ x ∈ compl U A := ZFSet.mem_inter.mp hx_inter -- 將 x ∈ A ∩ compl U A 拆成 x ∈ A ∧ x ∈ compl U A
+    have h_temp : x ∈ U ∧ x ∉ A := (mem_compl U A x).mp hx_pair.right -- 將 x ∈ compl U A 拆成 x ∈ U ∧ x ∉ A
+    have h_contra : False := h_temp.right hx_pair.left -- 矛盾：x ∉ A（從 h_temp.right）和 x ∈ A（從 hx_pair.left)
+    exact False.elim (ZFSet.notMem_empty x (False.elim h_contra)) -- 從 False 推出 x ∈ ∅，然後用 notMem_empty 推出矛盾
+  · intro hx_empty -- hx_empty : x ∈ ∅
+    -- x ∈ ∅ → x ∈ A ∩ compl U A（空真命題）
+    exact False.elim (ZFSet.notMem_empty x hx_empty)
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`x ∈ A ∩ compl U A → x ∈ ∅`
+
+**目標：** 證明如果 `x ∈ A ∩ compl U A`，則 `x ∈ ∅`
+
+**步驟 1：分解交集成員關係**
+- `ZFSet.mem_inter.mp hx_inter`：將 `x ∈ A ∩ compl U A` 轉換為 `x ∈ A ∧ x ∈ compl U A`
+- 現在我們有：`x ∈ A` 和 `x ∈ compl U A`
+
+**步驟 2：分解補集合成員關係**
+- `(mem_compl U A x).mp hx_pair.right`：將 `x ∈ compl U A` 轉換為 `x ∈ U ∧ x ∉ A`
+- 現在我們有：`x ∈ U` 和 `x ∉ A`
+
+**步驟 3：推出矛盾**
+- `h_temp.right : x ∉ A`：我們有 `x ∉ A`
+- `hx_pair.left : x ∈ A`：我們有 `x ∈ A`
+- `h_temp.right hx_pair.left`：將 `x ∉ A` 應用到 `x ∈ A`，得到 `False`
+- 這兩個命題矛盾
+
+**步驟 4：從矛盾推出目標**
+- `False.elim h_contra`：從 `False` 可以推出任何命題，包括 `x ∈ ∅`
+- `ZFSet.notMem_empty x (False.elim h_contra)`：但 `x ∈ ∅` 是不可能的（空集合沒有元素），所以又推出 `False`
+- 這完成了第一個方向的證明
+
+**關鍵理解：**
+- 如果 `x ∈ A ∩ compl U A`，則 `x ∈ A` 且 `x ∈ compl U A`
+- 從 `x ∈ compl U A` 得到 `x ∉ A`
+- 這與 `x ∈ A` 矛盾
+- 因此 `x ∈ A ∩ compl U A` 是不可能的，所以 `A ∩ compl U A = ∅`
+
+#### 第二個方向：`x ∈ ∅ → x ∈ A ∩ compl U A`
+
+**目標：** 證明如果 `x ∈ ∅`，則 `x ∈ A ∩ compl U A`
+
+**步驟：使用空真命題**
+- `hx_empty : x ∈ ∅`：我們有 `x ∈ ∅`
+- `ZFSet.notMem_empty x hx_empty`：但空集合沒有元素，所以 `x ∈ ∅` 是不可能的，推出 `False`
+- `False.elim ...`：從 `False` 可以推出任何命題，包括 `x ∈ A ∩ compl U A`
+- 這完成了第二個方向的證明
+
+**關鍵理解：**
+- 這是一個**空真命題**（vacuous truth）
+- 因為 `x ∈ ∅` 永遠為假，所以從它推出任何命題都是真的
+- 這是邏輯中的一個重要概念：從假命題可以推出任何命題
+
+**為什麼這個定理很重要？**
+
+1. **展示補集合的互斥性**：
+   - 它告訴我們，任何元素不能同時在 `A` 中和 `Aᶜ` 中
+   - 這類似於邏輯中的矛盾律：`P ∧ ¬P` 永遠為假
+
+2. **實際應用**：
+   - 當我們需要證明某個交集是空集合時，可以證明它的元素會導致矛盾
+   - 這在處理補集合相關的證明時很有用
+
+3. **直觀理解**：
+   - 補集合是「反面」，一個集合和它的反面沒有共同元素
+   - 如果 `A` 是「滿足某性質的集合」，那麼 `Aᶜ` 是「不滿足該性質的集合」，兩者沒有交集
+
+**關鍵技巧總結：**
+
+1. **交集的分解**：
+   - 使用 `ZFSet.mem_inter.mp` 分解交集成員關係
+   - 將 `x ∈ A ∩ B` 轉換為 `x ∈ A ∧ x ∈ B`
+
+2. **補集合的分解**：
+   - 使用 `mem_compl.mp` 分解補集合成員關係
+   - 將 `x ∈ compl U A` 轉換為 `x ∈ U ∧ x ∉ A`
+
+3. **矛盾的構造**：
+   - 當我們有 `x ∈ A` 和 `x ∉ A` 時，可以構造矛盾
+   - 使用 `h_temp.right hx_pair.left` 將 `x ∉ A` 應用到 `x ∈ A`，得到 `False`
+
+4. **`False.elim` 的使用**：
+   - 從 `False` 可以推出任何命題
+   - `False.elim h_contra : P` 表示從 `False` 推出命題 `P`
+   - 這是邏輯中的「爆炸原理」（principle of explosion）
+
+5. **空真命題**：
+   - 從假命題可以推出任何命題
+   - `x ∈ ∅` 永遠為假，所以從它推出任何命題都是真的
+   - 這是證明第二個方向的關鍵
+
+**關於 `False.elim` 的詳細解釋：**
+
+`False.elim` 是 Lean 中的一個重要工具，它允許我們從矛盾推出任何命題。
+
+**基本語法：**
+```lean
+False.elim h : P  -- 如果 h : False，則可以推出任何命題 P
+```
+
+**在我們的證明中：**
+```lean
+have h_contra : False := h_temp.right hx_pair.left  -- 構造矛盾
+exact False.elim (ZFSet.notMem_empty x (False.elim h_contra))  -- 從 False 推出 x ∈ ∅，然後用 notMem_empty 推出 False
+```
+
+**逐步分解：**
+1. `h_contra : False`：我們有矛盾
+2. `False.elim h_contra : x ∈ ∅`：從 `False` 推出 `x ∈ ∅`（任何命題）
+3. `ZFSet.notMem_empty x (False.elim h_contra)`：但 `x ∈ ∅` 是不可能的，所以又推出 `False`
+4. `False.elim ...`：從這個 `False` 可以推出目標 `x ∈ A ∩ compl U A`
+
+**為什麼需要兩次 `False.elim`？**
+
+1. **第一次 `False.elim`**：從矛盾 `h_contra : False` 推出 `x ∈ ∅`
+   - 這是為了構造 `ZFSet.notMem_empty` 需要的參數類型
+
+2. **第二次 `False.elim`**：從 `ZFSet.notMem_empty` 返回的 `False` 推出目標
+   - 這是為了完成證明
+
+**更多範例：**
+```lean
+-- 範例 1：從矛盾推出任何命題
+have h : False := ...
+exact False.elim h  -- 可以推出任何命題
+
+-- 範例 2：在我們的證明中
+have h_contra : False := h_temp.right hx_pair.left
+exact False.elim (ZFSet.notMem_empty x (False.elim h_contra))
+
+-- 範例 3：空真命題
+intro hx_empty : x ∈ ∅
+exact False.elim (ZFSet.notMem_empty x hx_empty)  -- 從 x ∈ ∅ 推出任何命題
+```
+
+**記憶要點：**
+- `A ∩ Aᶜ = ∅` 展示了補集合的互斥性
+- 證明時需要使用外延性公理和反證法
+- 第一個方向：如果 `x ∈ A ∩ compl U A`，則推出矛盾，因此 `x ∈ ∅`
+- 第二個方向：從 `x ∈ ∅`（空真命題）推出 `x ∈ A ∩ compl U A`
+- 不需要假設 `A ⊆ U`，因為我們直接從 `x ∈ compl U A` 得到所需信息
+- 補集合的定義：`x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
+- `False.elim` 允許從矛盾推出任何命題
+- 空真命題：從假命題可以推出任何命題
+
+---
+
+### 範例 13：差集合與補集合的關係
+
+**定理：** `A - B = A ∩ Bᶜ`，即 `set_diff A B = A ∩ compl U B`
+
+這個定理說明了一個集合與另一個集合的差集合等於該集合與另一個集合的補集合的交集。這是一個重要的集合運算性質，展示了差集合和補集合之間的關係。
+
+這個證明展示了：
+- 如何結合差集合、交集和補集合的定義
+- 如何使用子集合關係從 `x ∈ A` 推導出 `x ∈ U`
+- 如何在不同集合運算之間轉換
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_2_d (U A B : ZFSet) (hA_subset_U : A ⊆ U) : set_diff A B = A ∩ compl U B := by
+  apply ZFSet.ext -- 根據外延性公設，將 set_diff A B = A ∩ compl U B 轉換為 ∀ x, x ∈ set_diff A B ↔ x ∈ A ∩ compl U B
+  intro x -- x : any arbitrary element
+  constructor -- 將 ↔ 分成兩個部分
+  · intro hx_diff -- hx_diff : x ∈ set_diff A B
+    -- x ∈ set_diff A B → x ∈ A ∩ compl U B
+    have hx_pair : x ∈ A ∧ x ∉ B := (mem_diff A B x).mp hx_diff -- 將 x ∈ set_diff A B 拆成 x ∈ A ∧ x ∉ B
+    have hx_in_U : x ∈ U := hA_subset_U hx_pair.left -- 因為 A ⊆ U 且 x ∈ A，所以 x ∈ U
+    have hx_compl : x ∈ compl U B := (mem_compl U B x).mpr ⟨hx_in_U, hx_pair.right⟩ -- 將 x ∈ U ∧ x ∉ B 轉換為 x ∈ compl U B
+    exact ZFSet.mem_inter.mpr ⟨hx_pair.left, hx_compl⟩ -- 將 x ∈ A ∧ x ∈ compl U B 轉換為 x ∈ A ∩ compl U B
+  · intro hx_inter -- hx_inter : x ∈ A ∩ compl U B
+    -- x ∈ A ∩ compl U B → x ∈ set_diff A B
+    have hx_pair : x ∈ A ∧ x ∈ compl U B := ZFSet.mem_inter.mp hx_inter -- 將 x ∈ A ∩ compl U B 拆成 x ∈ A ∧ x ∈ compl U B
+    have h_temp : x ∈ U ∧ x ∉ B := (mem_compl U B x).mp hx_pair.right -- 將 x ∈ compl U B 拆成 x ∈ U ∧ x ∉ B
+    have hx_not_in_B : x ∉ B := h_temp.right -- 從 x ∈ U ∧ x ∉ B 提取 x ∉ B
+    exact (mem_diff A B x).mpr ⟨hx_pair.left, hx_not_in_B⟩ -- 將 x ∈ A ∧ x ∉ B 轉換為 x ∈ set_diff A B
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`x ∈ set_diff A B → x ∈ A ∩ compl U B`
+
+**目標：** 證明如果 `x ∈ set_diff A B`，則 `x ∈ A ∩ compl U B`
+
+**步驟 1：分解差集合成員關係**
+- `(mem_diff A B x).mp hx_diff`：將 `x ∈ set_diff A B` 轉換為 `x ∈ A ∧ x ∉ B`
+- 現在我們有：`x ∈ A` 和 `x ∉ B`
+
+**步驟 2：應用子集合關係**
+- `hA_subset_U hx_pair.left`：因為 `A ⊆ U` 且 `x ∈ A`，所以 `x ∈ U`
+- 現在我們有：`x ∈ U` 和 `x ∉ B`
+
+**步驟 3：構造補集合成員關係**
+- `(mem_compl U B x).mpr ⟨hx_in_U, hx_pair.right⟩`：將 `x ∈ U ∧ x ∉ B` 轉換為 `x ∈ compl U B`
+- 現在我們有：`x ∈ A` 和 `x ∈ compl U B`
+
+**步驟 4：構造交集成員關係**
+- `ZFSet.mem_inter.mpr ⟨hx_pair.left, hx_compl⟩`：將 `x ∈ A ∧ x ∈ compl U B` 轉換為 `x ∈ A ∩ compl U B`
+- 這完成了第一個方向的證明
+
+**關鍵理解：**
+- 如果 `x ∈ set_diff A B`，則 `x ∈ A` 且 `x ∉ B`
+- 因為 `A ⊆ U`，所以 `x ∈ U`
+- 因此 `x ∈ U ∧ x ∉ B`，即 `x ∈ compl U B`
+- 所以 `x ∈ A` 且 `x ∈ compl U B`，即 `x ∈ A ∩ compl U B`
+
+#### 第二個方向：`x ∈ A ∩ compl U B → x ∈ set_diff A B`
+
+**目標：** 證明如果 `x ∈ A ∩ compl U B`，則 `x ∈ set_diff A B`
+
+**步驟 1：分解交集成員關係**
+- `ZFSet.mem_inter.mp hx_inter`：將 `x ∈ A ∩ compl U B` 轉換為 `x ∈ A ∧ x ∈ compl U B`
+- 現在我們有：`x ∈ A` 和 `x ∈ compl U B`
+
+**步驟 2：分解補集合成員關係**
+- `(mem_compl U B x).mp hx_pair.right`：將 `x ∈ compl U B` 轉換為 `x ∈ U ∧ x ∉ B`
+- 現在我們有：`x ∈ U` 和 `x ∉ B`
+
+**步驟 3：提取 `x ∉ B`**
+- `h_temp.right`：從 `x ∈ U ∧ x ∉ B` 提取 `x ∉ B`
+- 現在我們有：`x ∈ A` 和 `x ∉ B`
+
+**步驟 4：構造差集合成員關係**
+- `(mem_diff A B x).mpr ⟨hx_pair.left, hx_not_in_B⟩`：將 `x ∈ A ∧ x ∉ B` 轉換為 `x ∈ set_diff A B`
+- 這完成了第二個方向的證明
+
+**關鍵理解：**
+- 如果 `x ∈ A ∩ compl U B`，則 `x ∈ A` 且 `x ∈ compl U B`
+- 從 `x ∈ compl U B` 得到 `x ∈ U ∧ x ∉ B`
+- 因此 `x ∈ A` 且 `x ∉ B`，即 `x ∈ set_diff A B`
+
+**為什麼這個定理很重要？**
+
+1. **展示差集合和補集合的關係**：
+   - 它告訴我們，差集合可以用交集和補集合來表示
+   - `A - B = A ∩ Bᶜ` 是一個重要的集合運算恆等式
+
+2. **實際應用**：
+   - 當我們需要處理差集合時，可以將其轉換為交集和補集合
+   - 這在處理複雜的集合運算時很有用
+
+3. **直觀理解**：
+   - `A - B` 是「在 `A` 中但不在 `B` 中的元素」
+   - `A ∩ Bᶜ` 是「在 `A` 中且在 `B` 的補集合中的元素」
+   - 這兩個描述是等價的
+
+**關鍵技巧總結：**
+
+1. **差集合的分解和構造**：
+   - 使用 `mem_diff.mp` 分解差集合成員關係
+   - 使用 `mem_diff.mpr` 構造差集合成員關係
+   - `x ∈ set_diff A B ↔ x ∈ A ∧ x ∉ B`
+
+2. **補集合的分解和構造**：
+   - 使用 `mem_compl.mp` 分解補集合成員關係
+   - 使用 `mem_compl.mpr` 構造補集合成員關係
+   - `x ∈ compl U B ↔ x ∈ U ∧ x ∉ B`
+
+3. **交集的分解和構造**：
+   - 使用 `ZFSet.mem_inter.mp` 分解交集成員關係
+   - 使用 `ZFSet.mem_inter.mpr` 構造交集成員關係
+   - `x ∈ A ∩ B ↔ x ∈ A ∧ x ∈ B`
+
+4. **子集合關係的應用**：
+   - `hA_subset_U : A ⊆ U` 可以應用到 `x ∈ A` 得到 `x ∈ U`
+   - 這是證明第一個方向的關鍵
+
+5. **從合取中提取部分**：
+   - 使用 `.left` 提取合取的左側部分
+   - 使用 `.right` 提取合取的右側部分
+   - 例如：`h_temp.right` 從 `x ∈ U ∧ x ∉ B` 提取 `x ∉ B`
+
+**關於差集合和補集合關係的詳細解釋：**
+
+**差集合的定義：**
+```lean
+x ∈ set_diff A B ↔ x ∈ A ∧ x ∉ B
+```
+
+**補集合的定義：**
+```lean
+x ∈ compl U B ↔ x ∈ U ∧ x ∉ B
+```
+
+**關係的建立：**
+- 如果 `x ∈ set_diff A B`，則 `x ∈ A` 且 `x ∉ B`
+- 如果 `A ⊆ U`，則 `x ∈ A` 意味著 `x ∈ U`
+- 因此 `x ∈ U ∧ x ∉ B`，即 `x ∈ compl U B`
+- 所以 `x ∈ A` 且 `x ∈ compl U B`，即 `x ∈ A ∩ compl U B`
+
+**反過來：**
+- 如果 `x ∈ A ∩ compl U B`，則 `x ∈ A` 且 `x ∈ compl U B`
+- 從 `x ∈ compl U B` 得到 `x ∈ U ∧ x ∉ B`
+- 因此 `x ∈ A` 且 `x ∉ B`，即 `x ∈ set_diff A B`
+
+**記憶要點：**
+- `A - B = A ∩ Bᶜ` 展示了差集合和補集合的關係
+- 證明時需要使用外延性公理
+- 第一個方向：從 `x ∈ set_diff A B` 推導出 `x ∈ A ∩ compl U B`
+- 第二個方向：從 `x ∈ A ∩ compl U B` 推導出 `x ∈ set_diff A B`
+- 需要假設 `A ⊆ U` 來確保 `x ∈ A` 時有 `x ∈ U`
+- 差集合的定義：`x ∈ set_diff A B ↔ x ∈ A ∧ x ∉ B`
+- 補集合的定義：`x ∈ compl U B ↔ x ∈ U ∧ x ∉ B`
+- 交集的定義：`x ∈ A ∩ B ↔ x ∈ A ∧ x ∈ B`
+
+---
+
+### 範例 14：子集合關係與補集合的對偶性
+
+**定理：** `A ⊆ B ↔ Bᶜ ⊆ Aᶜ`，即 `A ⊆ B ↔ compl U B ⊆ compl U A`
+
+這個定理說明了一個重要的對偶性質：如果 `A` 是 `B` 的子集合，則 `B` 的補集合是 `A` 的補集合的子集合。這是補集合運算的一個基本性質，展示了子集合關係在補集合運算下的「反向」特性。
+
+這個證明展示了：
+- 如何使用反證法證明否定命題
+- 如何結合子集合關係和補集合的定義
+- 如何處理雙向等價關係的證明
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_2_e (U A B : ZFSet) (hA_subset_U : A ⊆ U) (_hB_subset_U : B ⊆ U) : A ⊆ B ↔ compl U B ⊆ compl U A := by
+  constructor -- 將 ↔ 分成兩個方向
+  · intro hA_B x hx_compl_B -- hA_B : A ⊆ B, x : any arbitrary element, hx_compl_B : x ∈ compl U B
+    -- x ∈ compl U B → x ∈ compl U A
+    have h_temp : x ∈ U ∧ x ∉ B := (mem_compl U B x).mp hx_compl_B -- 將 x ∈ compl U B 拆成 x ∈ U ∧ x ∉ B
+    have hx_not_in_A : x ∉ A := by -- 證明 x ∉ A
+      by_contra hx_in_A -- 假設 x ∈ A（要證明 x ∉ A，所以假設其否定）
+      have hx_in_B : x ∈ B := hA_B hx_in_A -- 因為 A ⊆ B 且 x ∈ A，所以 x ∈ B
+      exact h_temp.right hx_in_B -- 矛盾：x ∉ B（從 h_temp.right）和 x ∈ B（從 hx_in_B）
+    exact (mem_compl U A x).mpr ⟨h_temp.left, hx_not_in_A⟩ -- 將 x ∈ U ∧ x ∉ A 轉換為 x ∈ compl U A
+  · intro h_compl_B_compl_A x hx_A -- h_compl_B_compl_A : compl U B ⊆ compl U A, x : any arbitrary element, hx_A : x ∈ A
+    -- x ∈ A → x ∈ B
+    have hx_in_U : x ∈ U := hA_subset_U hx_A -- 因為 A ⊆ U 且 x ∈ A，所以 x ∈ U
+    by_contra hx_not_in_B -- 假設 x ∉ B（要證明 x ∈ B，所以假設其否定）
+    have hx_compl_B : x ∈ compl U B := (mem_compl U B x).mpr ⟨hx_in_U, hx_not_in_B⟩ -- 將 x ∈ U ∧ x ∉ B 轉換為 x ∈ compl U B
+    have hx_compl_A : x ∈ compl U A := h_compl_B_compl_A hx_compl_B -- 因為 compl U B ⊆ compl U A 且 x ∈ compl U B，所以 x ∈ compl U A
+    have h_temp : x ∈ U ∧ x ∉ A := (mem_compl U A x).mp hx_compl_A -- 將 x ∈ compl U A 拆成 x ∈ U ∧ x ∉ A
+    exact h_temp.right hx_A -- 矛盾：x ∉ A（從 h_temp.right）和 x ∈ A（從 hx_A）
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`A ⊆ B → compl U B ⊆ compl U A`
+
+**目標：** 證明如果 `A ⊆ B`，則 `compl U B ⊆ compl U A`
+
+**步驟 1：引入假設**
+- `hA_B : A ⊆ B`：我們有 `A ⊆ B`
+- `x : any arbitrary element`：任意元素 `x`
+- `hx_compl_B : x ∈ compl U B`：假設 `x ∈ compl U B`
+- 目標：證明 `x ∈ compl U A`
+
+**步驟 2：分解補集合成員關係**
+- `(mem_compl U B x).mp hx_compl_B`：將 `x ∈ compl U B` 轉換為 `x ∈ U ∧ x ∉ B`
+- 現在我們有：`x ∈ U` 和 `x ∉ B`
+
+**步驟 3：證明 `x ∉ A`（使用反證法）**
+- `by_contra hx_in_A`：假設 `x ∈ A`（要證明 `x ∉ A`，所以假設其否定）
+- `hA_B hx_in_A`：因為 `A ⊆ B` 且 `x ∈ A`，所以 `x ∈ B`
+- `h_temp.right hx_in_B`：矛盾！我們有 `x ∉ B`（從 `h_temp.right`）和 `x ∈ B`（從 `hA_B hx_in_A`）
+- 因此 `x ∉ A` 成立
+
+**步驟 4：構造補集合成員關係**
+- `(mem_compl U A x).mpr ⟨h_temp.left, hx_not_in_A⟩`：將 `x ∈ U ∧ x ∉ A` 轉換為 `x ∈ compl U A`
+- 這完成了第一個方向的證明
+
+**關鍵理解：**
+- 如果 `A ⊆ B` 且 `x ∈ compl U B`，則 `x ∉ B`
+- 如果 `x ∈ A`，則因為 `A ⊆ B`，所以 `x ∈ B`，但 `x ∉ B`，矛盾
+- 因此 `x ∉ A`，所以 `x ∈ compl U A`
+
+#### 第二個方向：`compl U B ⊆ compl U A → A ⊆ B`
+
+**目標：** 證明如果 `compl U B ⊆ compl U A`，則 `A ⊆ B`
+
+**步驟 1：引入假設**
+- `h_compl_B_compl_A : compl U B ⊆ compl U A`：我們有 `compl U B ⊆ compl U A`
+- `x : any arbitrary element`：任意元素 `x`
+- `hx_A : x ∈ A`：假設 `x ∈ A`
+- 目標：證明 `x ∈ B`
+
+**步驟 2：應用子集合關係**
+- `hA_subset_U hx_A`：因為 `A ⊆ U` 且 `x ∈ A`，所以 `x ∈ U`
+- 現在我們有：`x ∈ U` 和 `x ∈ A`
+
+**步驟 3：使用反證法證明 `x ∈ B`**
+- `by_contra hx_not_in_B`：假設 `x ∉ B`（要證明 `x ∈ B`，所以假設其否定）
+- `(mem_compl U B x).mpr ⟨hx_in_U, hx_not_in_B⟩`：將 `x ∈ U ∧ x ∉ B` 轉換為 `x ∈ compl U B`
+- `h_compl_B_compl_A hx_compl_B`：因為 `compl U B ⊆ compl U A` 且 `x ∈ compl U B`，所以 `x ∈ compl U A`
+- `(mem_compl U A x).mp hx_compl_A`：將 `x ∈ compl U A` 轉換為 `x ∈ U ∧ x ∉ A`
+- `h_temp.right hx_A`：矛盾！我們有 `x ∉ A`（從 `h_temp.right`）和 `x ∈ A`（從 `hx_A`）
+- 因此 `x ∈ B` 成立
+
+**關鍵理解：**
+- 如果 `compl U B ⊆ compl U A` 且 `x ∈ A`，要證明 `x ∈ B`
+- 假設 `x ∉ B`，則 `x ∈ compl U B`
+- 因為 `compl U B ⊆ compl U A`，所以 `x ∈ compl U A`，即 `x ∉ A`
+- 但 `x ∈ A`，矛盾
+- 因此 `x ∈ B`
+
+**為什麼這個定理很重要？**
+
+1. **展示補集合的對偶性質**：
+   - 它告訴我們，子集合關係在補集合運算下是「反向」的
+   - 如果 `A` 是 `B` 的子集合，則 `B` 的補集合是 `A` 的補集合的子集合
+   - 這類似於邏輯中的對偶性：`P → Q` 等價於 `¬Q → ¬P`
+
+2. **實際應用**：
+   - 當我們需要證明補集合之間的子集合關係時，可以轉換為證明原集合之間的子集合關係
+   - 這在處理補集合相關的證明時很有用
+
+3. **直觀理解**：
+   - 如果 `A` 是 `B` 的子集合，則 `A` 中的元素都在 `B` 中
+   - 因此不在 `B` 中的元素（`B` 的補集合）也不在 `A` 中（`A` 的補集合）
+   - 所以 `B` 的補集合是 `A` 的補集合的子集合
+
+**關鍵技巧總結：**
+
+1. **補集合的分解和構造**：
+   - 使用 `mem_compl.mp` 分解補集合成員關係
+   - 使用 `mem_compl.mpr` 構造補集合成員關係
+
+2. **反證法的使用**：
+   - 兩個方向都使用反證法
+   - 第一個方向：假設 `x ∈ A`，推出 `x ∈ B`，與 `x ∉ B` 矛盾
+   - 第二個方向：假設 `x ∉ B`，推出 `x ∉ A`，與 `x ∈ A` 矛盾
+
+3. **子集合關係的應用**：
+   - `hA_B : A ⊆ B` 可以應用到 `x ∈ A` 得到 `x ∈ B`
+   - `h_compl_B_compl_A : compl U B ⊆ compl U A` 可以應用到 `x ∈ compl U B` 得到 `x ∈ compl U A`
+
+4. **邏輯推理鏈**：
+   - 第一個方向：`x ∈ compl U B` → `x ∉ B` → `x ∉ A`（因為如果 `x ∈ A` 則 `x ∈ B`，矛盾）→ `x ∈ compl U A`
+   - 第二個方向：`x ∈ A` → 假設 `x ∉ B` → `x ∈ compl U B` → `x ∈ compl U A` → `x ∉ A`（矛盾）→ `x ∈ B`
+
+**記憶要點：**
+- `A ⊆ B ↔ Bᶜ ⊆ Aᶜ` 展示了補集合的對偶性質
+- 證明時需要使用反證法
+- 第一個方向：如果 `A ⊆ B` 且 `x ∈ compl U B`，則 `x ∈ compl U A`
+- 第二個方向：如果 `compl U B ⊆ compl U A` 且 `x ∈ A`，則 `x ∈ B`
+- 需要假設 `A ⊆ U` 和 `B ⊆ U` 來確保補集合的定義有效
+- 補集合的定義：`x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
+- 子集合關係：`A ⊆ B` 意味著如果 `x ∈ A`，則 `x ∈ B`
+
+---
+
+### 範例 15：交集為空與補集合的等價性
+
+**定理：** `A ∩ B = ∅ ↔ A = Bᶜ`（需要額外假設 `A ∪ B = U`），即 `A ∩ B = ∅ ↔ A = compl U B`
+
+這個定理說明了一個重要的性質：如果 `A` 和 `B` 的交集為空，且它們的聯集等於全域集合 `U`，則 `A` 等於 `B` 的補集合。這展示了交集為空和補集合之間的等價關係。
+
+**重要假設：**
+- `A ⊆ U`：`A` 是全集合 `U` 的子集合
+- `B ⊆ U`：`B` 是全集合 `U` 的子集合
+- `A ∪ B = U`：`A` 和 `B` 的聯集等於全域集合 `U`
+
+這個額外的假設 `A ∪ B = U` 是必要的，因為如果沒有這個假設，`A ∩ B = ∅` 並不能推出 `A = compl U B`。例如，如果 `A` 是 `compl U B` 的真子集合，則 `A ∩ B = ∅` 也成立，但 `A ≠ compl U B`。
+
+這個證明展示了：
+- 如何使用外延性公理證明集合相等
+- 如何結合交集、聯集和補集合的定義
+- 如何使用情況分析處理聯集成員關係
+- 如何處理空集合的證明
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_2_f (U A B : ZFSet) (hA_subset_U : A ⊆ U) (_hB_subset_U : B ⊆ U) (h_union : A ∪ B = U) : A ∩ B = ∅ ↔ A = compl U B := by
+  constructor -- 將 ↔ 分成兩個方向
+  · intro h_inter_empty -- h_inter_empty : A ∩ B = ∅
+    apply ZFSet.ext -- 根據外延性公設，將 A = compl U B 轉換為 ∀ x, x ∈ A ↔ x ∈ compl U B
+    intro x -- x : any arbitrary element
+    constructor -- 將 ↔ 分成兩個部分
+    · intro hx_A -- hx_A : x ∈ A
+      have hx_in_U : x ∈ U := hA_subset_U hx_A -- 因為 A ⊆ U 且 x ∈ A，所以 x ∈ U
+      have hx_not_in_B : x ∉ B := by -- 證明 x ∉ B
+        by_contra hx_in_B -- 假設 x ∈ B（要證明 x ∉ B，所以假設其否定）
+        have hx_inter : x ∈ A ∩ B := ZFSet.mem_inter.mpr ⟨hx_A, hx_in_B⟩ -- x ∈ A ∧ x ∈ B, so x ∈ A ∩ B
+        rw [h_inter_empty] at hx_inter -- 因為 A ∩ B = ∅，將 hx_inter 中的 A ∩ B 重寫為 ∅，得到 x ∈ ∅
+        exact ZFSet.notMem_empty x hx_inter -- 矛盾：x ∈ ∅ 是不可能的
+      exact (mem_compl U B x).mpr ⟨hx_in_U, hx_not_in_B⟩ -- 將 x ∈ U ∧ x ∉ B 轉換為 x ∈ compl U B
+    · intro hx_compl_B -- hx_compl_B : x ∈ compl U B
+      have h_temp : x ∈ U ∧ x ∉ B := (mem_compl U B x).mp hx_compl_B -- 將 x ∈ compl U B 拆成 x ∈ U ∧ x ∉ B
+      have hx_in_union : x ∈ A ∪ B := by -- 證明 x ∈ A ∪ B
+        rw [h_union] -- 因為 A ∪ B = U，將 A ∪ B 重寫為 U
+        exact h_temp.left -- x ∈ U
+      rw [ZFSet.mem_union] at hx_in_union -- 將 x ∈ A ∪ B 拆成 x ∈ A ∨ x ∈ B
+      cases hx_in_union with
+      | inl hx_A => exact hx_A -- 情況1：x ∈ A，直接成立
+      | inr hx_B => exact False.elim (h_temp.right hx_B) -- 情況2：x ∈ B，但 x ∉ B（從 h_temp.right），矛盾
+  · intro h_compl_B -- h_compl_B : A = compl U B
+    apply ZFSet.ext -- 根據外延性公設，將 A ∩ B = ∅ 轉換為 ∀ x, x ∈ A ∩ B ↔ x ∈ ∅
+    intro x -- x : any arbitrary element
+    constructor -- 將 ↔ 分成兩個部分
+    · intro hx_inter -- hx_inter : x ∈ A ∩ B
+      have hx_pair : x ∈ A ∧ x ∈ B := ZFSet.mem_inter.mp hx_inter -- 將 x ∈ A ∩ B 拆成 x ∈ A ∧ x ∈ B
+      rw [h_compl_B] at hx_pair -- 因為 A = compl U B，將 hx_pair.left 中的 A 重寫為 compl U B
+      have h_temp : x ∈ U ∧ x ∉ B := (mem_compl U B x).mp hx_pair.left -- 將 x ∈ compl U B 拆成 x ∈ U ∧ x ∉ B
+      have h_contra : False := h_temp.right hx_pair.right -- 矛盾：x ∉ B（從 h_temp.right）和 x ∈ B（從 hx_pair.right）
+      exact False.elim (ZFSet.notMem_empty x (False.elim h_contra)) -- 從 False 推出 x ∈ ∅
+    · intro hx_empty -- hx_empty : x ∈ ∅
+      exact False.elim (ZFSet.notMem_empty x hx_empty) -- x ∈ ∅ → x ∈ A ∩ B（空真命題）
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`A ∩ B = ∅ → A = compl U B`
+
+**目標：** 證明如果 `A ∩ B = ∅` 且 `A ∪ B = U`，則 `A = compl U B`
+
+**步驟 1：使用外延性公理**
+- `apply ZFSet.ext`：將 `A = compl U B` 轉換為 `∀ x, x ∈ A ↔ x ∈ compl U B`
+- `intro x`：引入任意元素 `x`
+- `constructor`：將 `↔` 分成兩個部分
+
+**步驟 2：第一部分 - 從 `x ∈ A` 推導出 `x ∈ compl U B`**
+- `hx_A : x ∈ A`：假設 `x ∈ A`
+- `hx_in_U : x ∈ U`：因為 `A ⊆ U` 且 `x ∈ A`，所以 `x ∈ U`
+- `hx_not_in_B : x ∉ B`：使用反證法證明 `x ∉ B`
+  - `by_contra hx_in_B`：假設 `x ∈ B`
+  - `ZFSet.mem_inter.mpr ⟨hx_A, hx_in_B⟩`：如果 `x ∈ A` 且 `x ∈ B`，則 `x ∈ A ∩ B`
+  - `rw [h_inter_empty] at hx_inter`：因為 `A ∩ B = ∅`，所以 `x ∈ ∅`
+  - `ZFSet.notMem_empty x hx_inter`：矛盾！`x ∈ ∅` 是不可能的
+- `(mem_compl U B x).mpr ⟨hx_in_U, hx_not_in_B⟩`：將 `x ∈ U ∧ x ∉ B` 轉換為 `x ∈ compl U B`
+
+**步驟 3：第二部分 - 從 `x ∈ compl U B` 推導出 `x ∈ A`**
+- `hx_compl_B : x ∈ compl U B`：假設 `x ∈ compl U B`
+- `(mem_compl U B x).mp hx_compl_B`：將 `x ∈ compl U B` 轉換為 `x ∈ U ∧ x ∉ B`
+- `hx_in_union : x ∈ A ∪ B`：因為 `A ∪ B = U` 且 `x ∈ U`，所以 `x ∈ A ∪ B`
+- `rw [ZFSet.mem_union] at hx_in_union`：將 `x ∈ A ∪ B` 轉換為 `x ∈ A ∨ x ∈ B`
+- `cases hx_in_union`：分情況討論
+  - `inl hx_A`：情況 1：`x ∈ A`，直接成立
+  - `inr hx_B`：情況 2：`x ∈ B`，但 `x ∉ B`（從 `h_temp.right`），矛盾
+
+**關鍵理解：**
+- 如果 `A ∩ B = ∅` 且 `A ∪ B = U`，則 `A` 和 `B` 互補
+- 如果 `x ∈ A`，則 `x ∉ B`（因為 `A ∩ B = ∅`），所以 `x ∈ compl U B`
+- 如果 `x ∈ compl U B`，則 `x ∈ U` 且 `x ∉ B`
+- 因為 `A ∪ B = U`，所以 `x ∈ A` 或 `x ∈ B`
+- 但 `x ∉ B`，所以 `x ∈ A`
+
+#### 第二個方向：`A = compl U B → A ∩ B = ∅`
+
+**目標：** 證明如果 `A = compl U B`，則 `A ∩ B = ∅`
+
+**步驟 1：使用外延性公理**
+- `apply ZFSet.ext`：將 `A ∩ B = ∅` 轉換為 `∀ x, x ∈ A ∩ B ↔ x ∈ ∅`
+- `intro x`：引入任意元素 `x`
+- `constructor`：將 `↔` 分成兩個部分
+
+**步驟 2：第一部分 - 從 `x ∈ A ∩ B` 推導出 `x ∈ ∅`**
+- `hx_inter : x ∈ A ∩ B`：假設 `x ∈ A ∩ B`
+- `ZFSet.mem_inter.mp hx_inter`：將 `x ∈ A ∩ B` 轉換為 `x ∈ A ∧ x ∈ B`
+- `rw [h_compl_B] at hx_pair`：因為 `A = compl U B`，將 `hx_pair.left` 中的 `A` 重寫為 `compl U B`
+- `(mem_compl U B x).mp hx_pair.left`：將 `x ∈ compl U B` 轉換為 `x ∈ U ∧ x ∉ B`
+- `h_temp.right hx_pair.right`：矛盾！我們有 `x ∉ B`（從 `h_temp.right`）和 `x ∈ B`（從 `hx_pair.right`）
+- `False.elim (ZFSet.notMem_empty x (False.elim h_contra))`：從 `False` 推出 `x ∈ ∅`
+
+**步驟 3：第二部分 - 從 `x ∈ ∅` 推導出 `x ∈ A ∩ B`（空真命題）**
+- `hx_empty : x ∈ ∅`：假設 `x ∈ ∅`
+- `ZFSet.notMem_empty x hx_empty`：矛盾！`x ∈ ∅` 是不可能的
+- 這是空真命題：從 `False` 可以推出任何命題
+
+**關鍵理解：**
+- 如果 `A = compl U B`，則 `A` 中的所有元素都不在 `B` 中
+- 因此 `A ∩ B` 中沒有元素，即 `A ∩ B = ∅`
+- 如果 `x ∈ A ∩ B`，則 `x ∈ A` 且 `x ∈ B`
+- 但 `x ∈ A = compl U B` 意味著 `x ∉ B`，與 `x ∈ B` 矛盾
+- 因此 `A ∩ B = ∅`
+
+**為什麼這個定理很重要？**
+
+1. **展示交集為空和補集合的關係**：
+   - 它告訴我們，如果兩個集合的交集為空且它們的聯集等於全域集合，則它們互補
+   - 這在處理互補集合時很有用
+
+2. **實際應用**：
+   - 當我們需要證明兩個集合互補時，可以證明它們的交集為空且聯集等於全域集合
+   - 這在處理集合的分割和分類時很有用
+
+3. **直觀理解**：
+   - 如果 `A` 和 `B` 的交集為空，則它們沒有共同元素
+   - 如果它們的聯集等於全域集合，則全域集合中的每個元素都在 `A` 或 `B` 中
+   - 因此 `A` 和 `B` 互補，即 `A = compl U B`
+
+**關鍵技巧總結：**
+
+1. **外延性公理的使用**：
+   - 使用 `apply ZFSet.ext` 將集合相等轉換為成員關係的等價
+   - 這是證明集合相等的基本方法
+
+2. **情況分析的使用**：
+   - 使用 `cases` 處理聯集成員關係 `x ∈ A ∪ B`
+   - 這允許我們分別處理 `x ∈ A` 和 `x ∈ B` 兩種情況
+
+3. **反證法的使用**：
+   - 第一個方向的第一部分使用反證法證明 `x ∉ B`
+   - 第二個方向的第一部分使用反證法證明 `A ∩ B = ∅`
+
+4. **補集合的分解和構造**：
+   - 使用 `mem_compl.mp` 分解補集合成員關係
+   - 使用 `mem_compl.mpr` 構造補集合成員關係
+
+5. **空集合的處理**：
+   - 使用 `ZFSet.notMem_empty` 處理空集合的成員關係
+   - 空真命題：從 `False` 可以推出任何命題
+
+**記憶要點：**
+- `A ∩ B = ∅ ↔ A = compl U B` 展示了交集為空和補集合的等價關係
+- 需要額外假設 `A ∪ B = U` 來確保定理成立
+- 證明時需要使用外延性公理
+- 第一個方向：如果 `A ∩ B = ∅` 且 `A ∪ B = U`，則 `A = compl U B`
+- 第二個方向：如果 `A = compl U B`，則 `A ∩ B = ∅`
+- 需要假設 `A ⊆ U` 和 `B ⊆ U` 來確保補集合的定義有效
+- 補集合的定義：`x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
+- 交集的定義：`x ∈ A ∩ B ↔ x ∈ A ∧ x ∈ B`
+- 聯集的定義：`x ∈ A ∪ B ↔ x ∈ A ∨ x ∈ B`
+- 空集合的性質：`x ∈ ∅` 永遠為假
+
+---
+
+### 範例 16：德摩根定律 - 聯集的補集合等於補集合的交集
+
+**定理：** `(A ∪ B)ᶜ = Aᶜ ∩ Bᶜ`，即 `compl U (A ∪ B) = compl U A ∩ compl U B`
+
+這是德摩根定律（De Morgan's Law）在集合論中的應用。德摩根定律是邏輯和集合論中的基本定律，它描述了補集合運算與聯集、交集運算之間的關係。
+
+這個定理說明：兩個集合的聯集的補集合，等於它們各自補集合的交集。這在處理補集合相關的證明時非常有用。
+
+這個證明展示了：
+- 如何使用外延性公理證明集合相等
+- 如何處理補集合和聯集的組合
+- 如何使用反證法證明否定命題
+- 如何使用情況分析處理聯集成員關係
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_2_g (U A B : ZFSet): compl U (A ∪ B) = compl U A ∩ compl U B := by
+  apply ZFSet.ext -- 根據外延性公設，將 compl U (A ∪ B) = compl U A ∩ compl U B 轉換為 ∀ x, x ∈ compl U (A ∪ B) ↔ x ∈ compl U A ∩ compl U B
+  intro x -- x : any arbitrary element
+  constructor -- 將 ↔ 分成兩個部分
+  · intro hx_compl_union -- hx_compl_union : x ∈ compl U (A ∪ B)
+    -- x ∈ compl U (A ∪ B) → x ∈ compl U A ∩ compl U B
+    have h_temp : x ∈ U ∧ x ∉ (A ∪ B) := (mem_compl U (A ∪ B) x).mp hx_compl_union -- 將 x ∈ compl U (A ∪ B) 拆成 x ∈ U ∧ x ∉ (A ∪ B)
+    have hx_not_in_union : x ∉ (A ∪ B) := h_temp.right -- 從 x ∈ U ∧ x ∉ (A ∪ B) 提取 x ∉ (A ∪ B)
+    have hx_not_A_and_not_B : x ∉ A ∧ x ∉ B := by -- 證明 x ∉ A ∧ x ∉ B
+      constructor -- 將合取分成兩個部分
+      · intro hx_A -- 假設 x ∈ A
+        have hx_in_union : x ∈ A ∪ B := ZFSet.mem_union.mpr (Or.inl hx_A) -- x ∈ A，所以 x ∈ A ∪ B
+        exact hx_not_in_union hx_in_union -- 矛盾：x ∉ (A ∪ B) 和 x ∈ A ∪ B
+      · intro hx_B -- 假設 x ∈ B
+        have hx_in_union : x ∈ A ∪ B := ZFSet.mem_union.mpr (Or.inr hx_B) -- x ∈ B，所以 x ∈ A ∪ B
+        exact hx_not_in_union hx_in_union -- 矛盾：x ∉ (A ∪ B) 和 x ∈ A ∪ B
+    have hx_compl_A : x ∈ compl U A := (mem_compl U A x).mpr ⟨h_temp.left, hx_not_A_and_not_B.left⟩ -- 將 x ∈ U ∧ x ∉ A 轉換為 x ∈ compl U A
+    have hx_compl_B : x ∈ compl U B := (mem_compl U B x).mpr ⟨h_temp.left, hx_not_A_and_not_B.right⟩ -- 將 x ∈ U ∧ x ∉ B 轉換為 x ∈ compl U B
+    exact ZFSet.mem_inter.mpr ⟨hx_compl_A, hx_compl_B⟩ -- 將 x ∈ compl U A ∧ x ∈ compl U B 轉換為 x ∈ compl U A ∩ compl U B
+  · intro hx_inter -- hx_inter : x ∈ compl U A ∩ compl U B
+    -- x ∈ compl U A ∩ compl U B → x ∈ compl U (A ∪ B)
+    have hx_pair : x ∈ compl U A ∧ x ∈ compl U B := ZFSet.mem_inter.mp hx_inter -- 將 x ∈ compl U A ∩ compl U B 拆成 x ∈ compl U A ∧ x ∈ compl U B
+    have h_temp_A : x ∈ U ∧ x ∉ A := (mem_compl U A x).mp hx_pair.left -- 將 x ∈ compl U A 拆成 x ∈ U ∧ x ∉ A
+    have h_temp_B : x ∈ U ∧ x ∉ B := (mem_compl U B x).mp hx_pair.right -- 將 x ∈ compl U B 拆成 x ∈ U ∧ x ∉ B
+    have hx_not_in_union : x ∉ (A ∪ B) := by -- 證明 x ∉ (A ∪ B)
+      intro hx_in_union -- 假設 x ∈ A ∪ B
+      rw [ZFSet.mem_union] at hx_in_union -- 將 x ∈ A ∪ B 拆成 x ∈ A ∨ x ∈ B
+      cases hx_in_union with
+      | inl hx_A => exact h_temp_A.right hx_A -- 情況1：x ∈ A，但 x ∉ A（從 h_temp_A.right），矛盾
+      | inr hx_B => exact h_temp_B.right hx_B -- 情況2：x ∈ B，但 x ∉ B（從 h_temp_B.right），矛盾
+    exact (mem_compl U (A ∪ B) x).mpr ⟨h_temp_A.left, hx_not_in_union⟩ -- 將 x ∈ U ∧ x ∉ (A ∪ B) 轉換為 x ∈ compl U (A ∪ B)
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`x ∈ compl U (A ∪ B) → x ∈ compl U A ∩ compl U B`
+
+**目標：** 證明如果 `x ∈ compl U (A ∪ B)`，則 `x ∈ compl U A ∩ compl U B`
+
+**步驟 1：分解補集合成員關係**
+- `(mem_compl U (A ∪ B) x).mp hx_compl_union`：將 `x ∈ compl U (A ∪ B)` 轉換為 `x ∈ U ∧ x ∉ (A ∪ B)`
+- 現在我們有：`x ∈ U` 和 `x ∉ (A ∪ B)`
+
+**步驟 2：證明 `x ∉ A ∧ x ∉ B`（使用反證法）**
+- `constructor`：將合取分成兩個部分
+- **第一部分 - 證明 `x ∉ A`**：
+  - `intro hx_A`：假設 `x ∈ A`
+  - `ZFSet.mem_union.mpr (Or.inl hx_A)`：如果 `x ∈ A`，則 `x ∈ A ∪ B`
+  - `hx_not_in_union hx_in_union`：矛盾！我們有 `x ∉ (A ∪ B)` 和 `x ∈ A ∪ B`
+  - 因此 `x ∉ A` 成立
+- **第二部分 - 證明 `x ∉ B`**：
+  - `intro hx_B`：假設 `x ∈ B`
+  - `ZFSet.mem_union.mpr (Or.inr hx_B)`：如果 `x ∈ B`，則 `x ∈ A ∪ B`
+  - `hx_not_in_union hx_in_union`：矛盾！我們有 `x ∉ (A ∪ B)` 和 `x ∈ A ∪ B`
+  - 因此 `x ∉ B` 成立
+
+**步驟 3：構造補集合成員關係**
+- `(mem_compl U A x).mpr ⟨h_temp.left, hx_not_A_and_not_B.left⟩`：將 `x ∈ U ∧ x ∉ A` 轉換為 `x ∈ compl U A`
+- `(mem_compl U B x).mpr ⟨h_temp.left, hx_not_A_and_not_B.right⟩`：將 `x ∈ U ∧ x ∉ B` 轉換為 `x ∈ compl U B`
+
+**步驟 4：構造交集成員關係**
+- `ZFSet.mem_inter.mpr ⟨hx_compl_A, hx_compl_B⟩`：將 `x ∈ compl U A ∧ x ∈ compl U B` 轉換為 `x ∈ compl U A ∩ compl U B`
+
+**關鍵理解：**
+- 如果 `x ∈ compl U (A ∪ B)`，則 `x ∉ (A ∪ B)`
+- 如果 `x ∉ (A ∪ B)`，則 `x ∉ A` 且 `x ∉ B`（因為如果 `x ∈ A` 或 `x ∈ B`，則 `x ∈ A ∪ B`）
+- 因此 `x ∈ compl U A` 且 `x ∈ compl U B`，所以 `x ∈ compl U A ∩ compl U B`
+
+#### 第二個方向：`x ∈ compl U A ∩ compl U B → x ∈ compl U (A ∪ B)`
+
+**目標：** 證明如果 `x ∈ compl U A ∩ compl U B`，則 `x ∈ compl U (A ∪ B)`
+
+**步驟 1：分解交集成員關係**
+- `ZFSet.mem_inter.mp hx_inter`：將 `x ∈ compl U A ∩ compl U B` 轉換為 `x ∈ compl U A ∧ x ∈ compl U B`
+- 現在我們有：`x ∈ compl U A` 和 `x ∈ compl U B`
+
+**步驟 2：分解補集合成員關係**
+- `(mem_compl U A x).mp hx_pair.left`：將 `x ∈ compl U A` 轉換為 `x ∈ U ∧ x ∉ A`
+- `(mem_compl U B x).mp hx_pair.right`：將 `x ∈ compl U B` 轉換為 `x ∈ U ∧ x ∉ B`
+- 現在我們有：`x ∈ U`、`x ∉ A` 和 `x ∉ B`
+
+**步驟 3：證明 `x ∉ (A ∪ B)`（使用反證法）**
+- `intro hx_in_union`：假設 `x ∈ A ∪ B`
+- `rw [ZFSet.mem_union] at hx_in_union`：將 `x ∈ A ∪ B` 轉換為 `x ∈ A ∨ x ∈ B`
+- `cases hx_in_union`：分情況討論
+  - `inl hx_A`：情況 1：`x ∈ A`，但 `x ∉ A`（從 `h_temp_A.right`），矛盾
+  - `inr hx_B`：情況 2：`x ∈ B`，但 `x ∉ B`（從 `h_temp_B.right`），矛盾
+- 因此 `x ∉ (A ∪ B)` 成立
+
+**步驟 4：構造補集合成員關係**
+- `(mem_compl U (A ∪ B) x).mpr ⟨h_temp_A.left, hx_not_in_union⟩`：將 `x ∈ U ∧ x ∉ (A ∪ B)` 轉換為 `x ∈ compl U (A ∪ B)`
+
+**關鍵理解：**
+- 如果 `x ∈ compl U A` 且 `x ∈ compl U B`，則 `x ∉ A` 且 `x ∉ B`
+- 如果 `x ∉ A` 且 `x ∉ B`，則 `x ∉ (A ∪ B)`（因為如果 `x ∈ A ∪ B`，則 `x ∈ A` 或 `x ∈ B`，矛盾）
+- 因此 `x ∈ compl U (A ∪ B)`
+
+**為什麼這個定理很重要？**
+
+1. **德摩根定律的應用**：
+   - 這是邏輯和集合論中的基本定律
+   - 它展示了補集合運算與聯集、交集運算之間的關係
+   - 類似的定律也適用於交集：`(A ∩ B)ᶜ = Aᶜ ∪ Bᶜ`
+
+2. **實際應用**：
+   - 當我們需要證明補集合相關的性質時，可以轉換為證明原集合的性質
+   - 這在處理複雜的補集合表達式時很有用
+   - 可以用來簡化補集合的表達式
+
+3. **直觀理解**：
+   - 不在 `A` 或 `B` 中的元素（`(A ∪ B)ᶜ`），就是既不在 `A` 中也不在 `B` 中的元素（`Aᶜ ∩ Bᶜ`）
+   - 這符合我們對「不在 A 或 B 中」的直觀理解
+
+**關鍵技巧總結：**
+
+1. **補集合的分解和構造**：
+   - 使用 `mem_compl.mp` 分解補集合成員關係
+   - 使用 `mem_compl.mpr` 構造補集合成員關係
+
+2. **聯集的處理**：
+   - 使用 `ZFSet.mem_union.mpr` 構造聯集成員關係
+   - 使用 `ZFSet.mem_union.mp` 或 `rw [ZFSet.mem_union]` 分解聯集成員關係
+   - 使用 `cases` 處理析取（`x ∈ A ∨ x ∈ B`）
+
+3. **交集的處理**：
+   - 使用 `ZFSet.mem_inter.mpr` 構造交集成員關係
+   - 使用 `ZFSet.mem_inter.mp` 分解交集成員關係
+
+4. **反證法的使用**：
+   - 第一個方向：使用反證法證明 `x ∉ A` 和 `x ∉ B`
+   - 第二個方向：使用反證法證明 `x ∉ (A ∪ B)`
+
+5. **邏輯推理鏈**：
+   - 第一個方向：`x ∈ compl U (A ∪ B)` → `x ∉ (A ∪ B)` → `x ∉ A ∧ x ∉ B` → `x ∈ compl U A ∧ x ∈ compl U B` → `x ∈ compl U A ∩ compl U B`
+   - 第二個方向：`x ∈ compl U A ∩ compl U B` → `x ∉ A ∧ x ∉ B` → `x ∉ (A ∪ B)` → `x ∈ compl U (A ∪ B)`
+
+**記憶要點：**
+- `(A ∪ B)ᶜ = Aᶜ ∩ Bᶜ` 是德摩根定律在集合論中的應用
+- 證明時需要使用外延性公理
+- 第一個方向：如果 `x ∈ compl U (A ∪ B)`，則 `x ∈ compl U A ∩ compl U B`
+- 第二個方向：如果 `x ∈ compl U A ∩ compl U B`，則 `x ∈ compl U (A ∪ B)`
+- 補集合的定義：`x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
+- 聯集的定義：`x ∈ A ∪ B ↔ x ∈ A ∨ x ∈ B`
+- 交集的定義：`x ∈ A ∩ B ↔ x ∈ A ∧ x ∈ B`
+- 使用反證法證明否定命題：假設命題成立，推出矛盾
+- 使用情況分析處理析取：`cases` 可以分別處理 `x ∈ A` 和 `x ∈ B` 兩種情況
+
+---
+
+### 範例 17：德摩根定律 - 交集的補集合等於補集合的聯集
+
+**定理：** `(A ∩ B)ᶜ = Aᶜ ∪ Bᶜ`，即 `compl U (A ∩ B) = compl U A ∪ compl U B`
+
+這是德摩根定律的另一個方向，與範例 16 相對應。它說明：兩個集合的交集的補集合，等於它們各自補集合的聯集。
+
+這個定理與範例 16 一起構成了完整的德摩根定律：
+- `(A ∪ B)ᶜ = Aᶜ ∩ Bᶜ`（範例 16）
+- `(A ∩ B)ᶜ = Aᶜ ∪ Bᶜ`（範例 17）
+
+這個證明展示了：
+- 如何使用外延性公理證明集合相等
+- 如何處理補集合和交集的組合
+- 如何使用反證法證明析取命題
+- 如何使用情況分析處理聯集成員關係
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_2_h (U A B : ZFSet) : compl U (A ∩ B) = compl U A ∪ compl U B := by
+  apply ZFSet.ext -- 根據外延性公設，將 compl U (A ∩ B) = compl U A ∪ compl U B 轉換為 ∀ x, x ∈ compl U (A ∩ B) ↔ x ∈ compl U A ∪ compl U B
+  intro x -- x : any arbitrary element
+  constructor -- 將 ↔ 分成兩個部分
+  · intro hx_compl_inter -- hx_compl_inter : x ∈ compl U (A ∩ B)
+    -- x ∈ compl U (A ∩ B) → x ∈ compl U A ∪ compl U B
+    have h_temp : x ∈ U ∧ x ∉ (A ∩ B) := (mem_compl U (A ∩ B) x).mp hx_compl_inter -- 將 x ∈ compl U (A ∩ B) 拆成 x ∈ U ∧ x ∉ (A ∩ B)
+    have hx_not_in_inter : x ∉ (A ∩ B) := h_temp.right -- 從 x ∈ U ∧ x ∉ (A ∩ B) 提取 x ∉ (A ∩ B)
+    have hx_not_A_or_not_B : x ∉ A ∨ x ∉ B := by -- 證明 x ∉ A ∨ x ∉ B
+      by_contra h -- 假設 ¬(x ∉ A ∨ x ∉ B)，即 x ∈ A ∧ x ∈ B
+      have hx_in_A_and_B : x ∈ A ∧ x ∈ B := by -- 證明 x ∈ A ∧ x ∈ B
+        constructor -- 將合取分成兩個部分
+        · by_contra hx_not_A -- 假設 x ∉ A
+          exact h (Or.inl hx_not_A) -- 矛盾：¬(x ∉ A ∨ x ∉ B) 和 x ∉ A
+        · by_contra hx_not_B -- 假設 x ∉ B
+          exact h (Or.inr hx_not_B) -- 矛盾：¬(x ∉ A ∨ x ∉ B) 和 x ∉ B
+      have hx_in_inter : x ∈ A ∩ B := ZFSet.mem_inter.mpr hx_in_A_and_B -- 將 x ∈ A ∧ x ∈ B 轉換為 x ∈ A ∩ B
+      exact hx_not_in_inter hx_in_inter -- 矛盾：x ∉ (A ∩ B) 和 x ∈ A ∩ B
+    cases hx_not_A_or_not_B with
+    | inl hx_not_A => -- 情況1：x ∉ A
+      have hx_compl_A : x ∈ compl U A := (mem_compl U A x).mpr ⟨h_temp.left, hx_not_A⟩ -- 將 x ∈ U ∧ x ∉ A 轉換為 x ∈ compl U A
+      exact ZFSet.mem_union.mpr (Or.inl hx_compl_A) -- x ∈ compl U A，所以 x ∈ compl U A ∪ compl U B
+    | inr hx_not_B => -- 情況2：x ∉ B
+      have hx_compl_B : x ∈ compl U B := (mem_compl U B x).mpr ⟨h_temp.left, hx_not_B⟩ -- 將 x ∈ U ∧ x ∉ B 轉換為 x ∈ compl U B
+      exact ZFSet.mem_union.mpr (Or.inr hx_compl_B) -- x ∈ compl U B，所以 x ∈ compl U A ∪ compl U B
+  · intro hx_union -- hx_union : x ∈ compl U A ∪ compl U B
+    -- x ∈ compl U A ∪ compl U B → x ∈ compl U (A ∩ B)
+    rw [ZFSet.mem_union] at hx_union -- 將 x ∈ compl U A ∪ compl U B 拆成 x ∈ compl U A ∨ x ∈ compl U B
+    have hx_in_U : x ∈ U := by -- 證明 x ∈ U
+      cases hx_union with
+      | inl hx_compl_A => exact ((mem_compl U A x).mp hx_compl_A).left -- 情況1：x ∈ compl U A，所以 x ∈ U
+      | inr hx_compl_B => exact ((mem_compl U B x).mp hx_compl_B).left -- 情況2：x ∈ compl U B，所以 x ∈ U
+    have hx_not_in_inter : x ∉ (A ∩ B) := by -- 證明 x ∉ (A ∩ B)
+      intro hx_in_inter -- 假設 x ∈ A ∩ B
+      have hx_pair : x ∈ A ∧ x ∈ B := ZFSet.mem_inter.mp hx_in_inter -- 將 x ∈ A ∩ B 拆成 x ∈ A ∧ x ∈ B
+      cases hx_union with
+      | inl hx_compl_A => -- 情況1：x ∈ compl U A
+        have h_temp_A : x ∈ U ∧ x ∉ A := (mem_compl U A x).mp hx_compl_A -- 將 x ∈ compl U A 拆成 x ∈ U ∧ x ∉ A
+        exact h_temp_A.right hx_pair.left -- 矛盾：x ∉ A（從 h_temp_A.right）和 x ∈ A（從 hx_pair.left）
+      | inr hx_compl_B => -- 情況2：x ∈ compl U B
+        have h_temp_B : x ∈ U ∧ x ∉ B := (mem_compl U B x).mp hx_compl_B -- 將 x ∈ compl U B 拆成 x ∈ U ∧ x ∉ B
+        exact h_temp_B.right hx_pair.right -- 矛盾：x ∉ B（從 h_temp_B.right）和 x ∈ B（從 hx_pair.right）
+    exact (mem_compl U (A ∩ B) x).mpr ⟨hx_in_U, hx_not_in_inter⟩ -- 將 x ∈ U ∧ x ∉ (A ∩ B) 轉換為 x ∈ compl U (A ∩ B)
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`x ∈ compl U (A ∩ B) → x ∈ compl U A ∪ compl U B`
+
+**目標：** 證明如果 `x ∈ compl U (A ∩ B)`，則 `x ∈ compl U A ∪ compl U B`
+
+**步驟 1：分解補集合成員關係**
+- `(mem_compl U (A ∩ B) x).mp hx_compl_inter`：將 `x ∈ compl U (A ∩ B)` 轉換為 `x ∈ U ∧ x ∉ (A ∩ B)`
+- 現在我們有：`x ∈ U` 和 `x ∉ (A ∩ B)`
+
+**步驟 2：證明 `x ∉ A ∨ x ∉ B`（使用反證法）**
+- `by_contra h`：假設 `¬(x ∉ A ∨ x ∉ B)`，即 `x ∈ A ∧ x ∈ B`
+- **證明 `x ∈ A ∧ x ∈ B`**：
+  - `constructor`：將合取分成兩個部分
+  - **第一部分 - 證明 `x ∈ A`**：
+    - `by_contra hx_not_A`：假設 `x ∉ A`
+    - `h (Or.inl hx_not_A)`：矛盾！我們有 `¬(x ∉ A ∨ x ∉ B)` 和 `x ∉ A`
+    - 因此 `x ∈ A` 成立
+  - **第二部分 - 證明 `x ∈ B`**：
+    - `by_contra hx_not_B`：假設 `x ∉ B`
+    - `h (Or.inr hx_not_B)`：矛盾！我們有 `¬(x ∉ A ∨ x ∉ B)` 和 `x ∉ B`
+    - 因此 `x ∈ B` 成立
+- `ZFSet.mem_inter.mpr hx_in_A_and_B`：將 `x ∈ A ∧ x ∈ B` 轉換為 `x ∈ A ∩ B`
+- `hx_not_in_inter hx_in_inter`：矛盾！我們有 `x ∉ (A ∩ B)` 和 `x ∈ A ∩ B`
+- 因此 `x ∉ A ∨ x ∉ B` 成立
+
+**步驟 3：分情況構造聯集成員關係**
+- `cases hx_not_A_or_not_B`：分情況討論
+  - `inl hx_not_A`：情況 1：`x ∉ A`
+    - `(mem_compl U A x).mpr ⟨h_temp.left, hx_not_A⟩`：將 `x ∈ U ∧ x ∉ A` 轉換為 `x ∈ compl U A`
+    - `ZFSet.mem_union.mpr (Or.inl hx_compl_A)`：`x ∈ compl U A`，所以 `x ∈ compl U A ∪ compl U B`
+  - `inr hx_not_B`：情況 2：`x ∉ B`
+    - `(mem_compl U B x).mpr ⟨h_temp.left, hx_not_B⟩`：將 `x ∈ U ∧ x ∉ B` 轉換為 `x ∈ compl U B`
+    - `ZFSet.mem_union.mpr (Or.inr hx_compl_B)`：`x ∈ compl U B`，所以 `x ∈ compl U A ∪ compl U B`
+
+**關鍵理解：**
+- 如果 `x ∈ compl U (A ∩ B)`，則 `x ∉ (A ∩ B)`
+- 如果 `x ∉ (A ∩ B)`，則 `x ∉ A` 或 `x ∉ B`（因為如果 `x ∈ A` 且 `x ∈ B`，則 `x ∈ A ∩ B`，矛盾）
+- 因此 `x ∈ compl U A` 或 `x ∈ compl U B`，所以 `x ∈ compl U A ∪ compl U B`
+
+#### 第二個方向：`x ∈ compl U A ∪ compl U B → x ∈ compl U (A ∩ B)`
+
+**目標：** 證明如果 `x ∈ compl U A ∪ compl U B`，則 `x ∈ compl U (A ∩ B)`
+
+**步驟 1：分解聯集成員關係**
+- `rw [ZFSet.mem_union] at hx_union`：將 `x ∈ compl U A ∪ compl U B` 轉換為 `x ∈ compl U A ∨ x ∈ compl U B`
+- 現在我們有：`x ∈ compl U A` 或 `x ∈ compl U B`
+
+**步驟 2：證明 `x ∈ U`**
+- `cases hx_union`：分情況討論
+  - `inl hx_compl_A`：情況 1：`x ∈ compl U A`
+    - `((mem_compl U A x).mp hx_compl_A).left`：從 `x ∈ compl U A` 提取 `x ∈ U`
+  - `inr hx_compl_B`：情況 2：`x ∈ compl U B`
+    - `((mem_compl U B x).mp hx_compl_B).left`：從 `x ∈ compl U B` 提取 `x ∈ U`
+
+**步驟 3：證明 `x ∉ (A ∩ B)`（使用反證法）**
+- `intro hx_in_inter`：假設 `x ∈ A ∩ B`
+- `ZFSet.mem_inter.mp hx_in_inter`：將 `x ∈ A ∩ B` 轉換為 `x ∈ A ∧ x ∈ B`
+- `cases hx_union`：分情況討論
+  - `inl hx_compl_A`：情況 1：`x ∈ compl U A`
+    - `(mem_compl U A x).mp hx_compl_A`：將 `x ∈ compl U A` 轉換為 `x ∈ U ∧ x ∉ A`
+    - `h_temp_A.right hx_pair.left`：矛盾！我們有 `x ∉ A`（從 `h_temp_A.right`）和 `x ∈ A`（從 `hx_pair.left`）
+  - `inr hx_compl_B`：情況 2：`x ∈ compl U B`
+    - `(mem_compl U B x).mp hx_compl_B`：將 `x ∈ compl U B` 轉換為 `x ∈ U ∧ x ∉ B`
+    - `h_temp_B.right hx_pair.right`：矛盾！我們有 `x ∉ B`（從 `h_temp_B.right`）和 `x ∈ B`（從 `hx_pair.right`）
+- 因此 `x ∉ (A ∩ B)` 成立
+
+**步驟 4：構造補集合成員關係**
+- `(mem_compl U (A ∩ B) x).mpr ⟨hx_in_U, hx_not_in_inter⟩`：將 `x ∈ U ∧ x ∉ (A ∩ B)` 轉換為 `x ∈ compl U (A ∩ B)`
+
+**關鍵理解：**
+- 如果 `x ∈ compl U A` 或 `x ∈ compl U B`，則 `x ∉ A` 或 `x ∉ B`
+- 如果 `x ∉ A` 或 `x ∉ B`，則 `x ∉ (A ∩ B)`（因為如果 `x ∈ A ∩ B`，則 `x ∈ A` 且 `x ∈ B`，矛盾）
+- 因此 `x ∈ compl U (A ∩ B)`
+
+**為什麼這個定理很重要？**
+
+1. **完成德摩根定律**：
+   - 與範例 16 一起，構成了完整的德摩根定律
+   - 展示了補集合運算與聯集、交集運算之間的完整關係
+
+2. **實際應用**：
+   - 當我們需要證明補集合相關的性質時，可以轉換為證明原集合的性質
+   - 這在處理複雜的補集合表達式時很有用
+   - 可以用來簡化補集合的表達式
+
+3. **直觀理解**：
+   - 不在 `A` 和 `B` 的交集中的元素（`(A ∩ B)ᶜ`），就是不在 `A` 中或不在 `B` 中的元素（`Aᶜ ∪ Bᶜ`）
+   - 這符合我們對「不在 A 和 B 的交集中」的直觀理解
+
+**關鍵技巧總結：**
+
+1. **補集合的分解和構造**：
+   - 使用 `mem_compl.mp` 分解補集合成員關係
+   - 使用 `mem_compl.mpr` 構造補集合成員關係
+
+2. **聯集的處理**：
+   - 使用 `ZFSet.mem_union.mpr` 構造聯集成員關係
+   - 使用 `rw [ZFSet.mem_union]` 分解聯集成員關係
+   - 使用 `cases` 處理析取（`x ∈ A ∨ x ∈ B`）
+
+3. **交集的處理**：
+   - 使用 `ZFSet.mem_inter.mpr` 構造交集成員關係
+   - 使用 `ZFSet.mem_inter.mp` 分解交集成員關係
+
+4. **反證法的使用**：
+   - 第一個方向：使用反證法證明 `x ∉ A ∨ x ∉ B`
+   - 第二個方向：使用反證法證明 `x ∉ (A ∩ B)`
+
+5. **邏輯推理鏈**：
+   - 第一個方向：`x ∈ compl U (A ∩ B)` → `x ∉ (A ∩ B)` → `x ∉ A ∨ x ∉ B` → `x ∈ compl U A ∨ x ∈ compl U B` → `x ∈ compl U A ∪ compl U B`
+   - 第二個方向：`x ∈ compl U A ∪ compl U B` → `x ∉ A ∨ x ∉ B` → `x ∉ (A ∩ B)` → `x ∈ compl U (A ∩ B)`
+
+**記憶要點：**
+- `(A ∩ B)ᶜ = Aᶜ ∪ Bᶜ` 是德摩根定律的另一個方向
+- 與 `(A ∪ B)ᶜ = Aᶜ ∩ Bᶜ` 一起構成完整的德摩根定律
+- 證明時需要使用外延性公理
+- 第一個方向：如果 `x ∈ compl U (A ∩ B)`，則 `x ∈ compl U A ∪ compl U B`
+- 第二個方向：如果 `x ∈ compl U A ∪ compl U B`，則 `x ∈ compl U (A ∩ B)`
+- 補集合的定義：`x ∈ compl U A ↔ x ∈ U ∧ x ∉ A`
+- 聯集的定義：`x ∈ A ∪ B ↔ x ∈ A ∨ x ∈ B`
+- 交集的定義：`x ∈ A ∩ B ↔ x ∈ A ∧ x ∈ B`
+- 使用反證法證明析取命題：假設命題的否定成立，推出矛盾
+- 使用情況分析處理析取：`cases` 可以分別處理 `x ∉ A` 和 `x ∉ B` 兩種情況
+
+---
+
+## 有序對與笛卡爾積
+
+### 有序對（Ordered Pair）的定義
+
+在集合論中，我們需要一種方法來表示有序的元素對 `(a, b)`，其中順序很重要（即 `(a, b) ≠ (b, a)` 當 `a ≠ b` 時）。
+
+**Kuratowski 定義：**
+
+在 ZFC 中，有序對 `(a, b)` 定義為：
+```
+(a, b) = {{a}, {a, b}}
+```
+
+這個定義確保了：
+- `(a, b) = (c, d)` 當且僅當 `a = c` 且 `b = d`
+- 只使用集合（符合 ZFC 的要求）
+- 可以區分順序：`(a, b) ≠ (b, a)`（當 `a ≠ b` 時）
+
+**為什麼這樣定義？**
+
+1. **只使用集合**：`{{a}, {a, b}}` 完全由集合構成，符合 ZFC 的要求
+2. **可以區分順序**：當 `a ≠ b` 時，`{{a}, {a, b}} ≠ {{b}, {a, b}}`
+3. **可以判斷相等**：`(a, b) = (c, d)` 當且僅當 `a = c` 且 `b = d`
+
+**注意：**
+- 當 `a = b` 時，`{{a}, {a, a}} = {{a}}`（只有一個元素）
+- 當 `a ≠ b` 時，`{{a}, {a, b}}` 有兩個元素：`{a}` 和 `{a, b}`
+
+**完整定義：**
+
+```lean
+def ordered_pair (a b : ZFSet) : ZFSet := {{a}, {a, b}}
+```
+
+**語法解析：**
+- `def ordered_pair`：定義函數 `ordered_pair`
+- `(a b : ZFSet)`：參數 `a` 和 `b` 都是 `ZFSet` 類型
+- `: ZFSet`：返回類型是 `ZFSet`（一個集合）
+- `:= {{a}, {a, b}}`：使用配對公設構造集合 `{{a}, {a, b}}`
+
+**含義：**
+- `ordered_pair a b = {{a}, {a, b}}`
+- 即有序對 `(a, b)` 定義為包含 `{a}` 和 `{a, b}` 的集合
+
+---
+
+### 笛卡爾積（Cartesian Product）的定義
+
+**數學定義：**
+
+對於兩個集合 `A` 和 `B`，它們的笛卡爾積定義為：
+```
+A × B = {(a, b) | a ∈ A, b ∈ B}
+```
+
+即所有有序對 `(a, b)` 的集合，其中 `a ∈ A` 且 `b ∈ B`。
+
+**在 ZFC 中的定義：**
+
+在 ZFC 中，我們需要使用分離公設來構造笛卡爾積。關鍵觀察是：
+- 有序對 `(a, b) = {{a}, {a, b}}` 是 `A ∪ B` 的冪集的冪集的元素
+- 因為 `{a}` 和 `{a, b}` 都是 `A ∪ B` 的子集合
+- 所以 `{{a}, {a, b}}` 是 `powerset (A ∪ B)` 的子集合
+
+**完整定義：**
+
+```lean
+def product (A B : ZFSet) : ZFSet := 
+  ZFSet.sep 
+    (fun x => ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b) 
+    (ZFSet.powerset (ZFSet.powerset (A ∪ B)))
+```
+
+**語法解析：**
+- `def product`：定義函數 `product`
+- `(A B : ZFSet)`：參數 `A` 和 `B` 都是 `ZFSet` 類型
+- `: ZFSet`：返回類型是 `ZFSet`（一個集合）
+- `:= ZFSet.sep`：使用分離公設
+- `(fun x => ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b)`：性質：`x` 是 `A × B` 中的有序對
+- `(ZFSet.powerset (ZFSet.powerset (A ∪ B)))`：源集合：`A ∪ B` 的冪集的冪集
+
+**含義：**
+- `product A B = {x | ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b}`
+- 即從 `A ∪ B` 的冪集的冪集中選出所有形如 `(a, b)` 的有序對，其中 `a ∈ A` 且 `b ∈ B`
+
+**注意：**
+- 這個定義使用分離公設從一個足夠大的集合中分離出所有有序對
+- 因為有序對 `(a, b) = {{a}, {a, b}}` 是 `A ∪ B` 的冪集的冪集的元素
+
+---
+
+### 笛卡爾積的成員關係
+
+**定理：** `x ∈ product A B ↔ ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b`
+
+這個定理說明了笛卡爾積的成員關係：`x` 屬於 `A × B` 當且僅當 `x` 是某個有序對 `(a, b)`，其中 `a ∈ A` 且 `b ∈ B`。
+
+**完整證明：**
+
+```lean
+theorem mem_product (A B x : ZFSet) : x ∈ product A B ↔ ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b := by
+  rw [product] -- 展開 product 的定義
+  rw [ZFSet.mem_sep] -- 使用分離公設的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
+  constructor -- 將 ↔ 分成兩個方向
+  · intro ⟨hx_in_powerset, h_exists⟩ -- hx_in_powerset : x ∈ powerset (powerset (A ∪ B)), h_exists : ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b
+    exact h_exists -- 直接使用 h_exists
+  · intro h_exists -- h_exists : ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b
+    constructor -- 將合取分成兩個部分
+    · -- 證明 x ∈ powerset (powerset (A ∪ B))
+      -- 這需要證明有序對 ordered_pair a b = {{a}, {a, b}} 是 powerset (powerset (A ∪ B)) 的元素
+      -- 即證明 {{a}, {a, b}} ⊆ powerset (A ∪ B)
+      rcases h_exists with ⟨a, ha, b, hb, rfl⟩ -- 分解存在量詞，得到 a ∈ A, b ∈ B, x = ordered_pair a b
+      rw [ordered_pair] -- 展開 ordered_pair 的定義：x = {{a}, {a, b}}
+      apply ZFSet.mem_powerset.mpr -- 使用冪集的成員關係：x ∈ powerset A ↔ x ⊆ A，目標變成 {{a}, {a, b}} ⊆ powerset (A ∪ B)
+      intro z hz -- z : any arbitrary element, hz : z ∈ {{a}, {a, b}}
+      rw [ZFSet.mem_pair] at hz -- 將 z ∈ {{a}, {a, b}} 拆成 z = {a} ∨ z = {a, b}
+      cases hz with
+      | inl hz_eq => -- 情況1：z = {a}
+        rw [hz_eq] -- 將 z 重寫為 {a}
+        apply ZFSet.mem_powerset.mpr -- 證明 {a} ∈ powerset (A ∪ B)，即 {a} ⊆ A ∪ B
+        intro w hw -- w : any arbitrary element, hw : w ∈ {a}
+        rw [ZFSet.mem_singleton] at hw -- 將 w ∈ {a} 轉換為 w = a
+        rw [hw] -- 將 w 重寫為 a
+        rw [ZFSet.mem_union] -- 將 a ∈ A ∪ B 拆成 a ∈ A ∨ a ∈ B
+        left
+        exact ha -- a ∈ A，所以 a ∈ A ∪ B
+      | inr hz_eq => -- 情況2：z = {a, b}
+        rw [hz_eq] -- 將 z 重寫為 {a, b}
+        apply ZFSet.mem_powerset.mpr -- 證明 {a, b} ∈ powerset (A ∪ B)，即 {a, b} ⊆ A ∪ B
+        intro w hw -- w : any arbitrary element, hw : w ∈ {a, b}
+        rw [ZFSet.mem_pair] at hw -- 將 w ∈ {a, b} 拆成 w = a ∨ w = b
+        cases hw with
+        | inl hw_eq => -- w = a
+          rw [hw_eq] -- 將 w 重寫為 a
+          rw [ZFSet.mem_union] -- 將 a ∈ A ∪ B 拆成 a ∈ A ∨ a ∈ B
+          left
+          exact ha -- a ∈ A，所以 a ∈ A ∪ B
+        | inr hw_eq => -- w = b
+          rw [hw_eq] -- 將 w 重寫為 b
+          rw [ZFSet.mem_union] -- 將 b ∈ A ∪ B 拆成 a ∈ A ∨ b ∈ B
+          right
+          exact hb -- b ∈ B，所以 b ∈ A ∪ B
+    · exact h_exists -- 直接使用 h_exists
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`x ∈ product A B → ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b`
+
+**目標：** 證明如果 `x ∈ product A B`，則存在 `a ∈ A` 和 `b ∈ B`，使得 `x = ordered_pair a b`
+
+**步驟：**
+- `rw [product]`：展開 `product` 的定義
+- `rw [ZFSet.mem_sep]`：使用分離公設的成員關係，得到 `x ∈ powerset (powerset (A ∪ B)) ∧ ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b`
+- `exact h_exists`：直接使用存在量詞部分
+
+#### 第二個方向：`∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b → x ∈ product A B`
+
+**目標：** 證明如果存在 `a ∈ A` 和 `b ∈ B`，使得 `x = ordered_pair a b`，則 `x ∈ product A B`
+
+**步驟 1：分解存在量詞**
+- `rcases h_exists with ⟨a, ha, b, hb, rfl⟩`：分解存在量詞，得到 `a ∈ A`、`b ∈ B` 和 `x = ordered_pair a b`
+- `rw [ordered_pair]`：展開 `ordered_pair` 的定義，得到 `x = {{a}, {a, b}}`
+
+**步驟 2：證明 `x ∈ powerset (powerset (A ∪ B))`**
+- `apply ZFSet.mem_powerset.mpr`：目標變成 `{{a}, {a, b}} ⊆ powerset (A ∪ B)`
+- `intro z hz`：引入任意元素 `z`，假設 `z ∈ {{a}, {a, b}}`
+- `rw [ZFSet.mem_pair] at hz`：將 `z ∈ {{a}, {a, b}}` 拆成 `z = {a} ∨ z = {a, b}`
+- `cases hz`：分情況討論
+
+**情況 1：`z = {a}`**
+- `rw [hz_eq]`：將 `z` 重寫為 `{a}`
+- `apply ZFSet.mem_powerset.mpr`：目標變成 `{a} ⊆ A ∪ B`
+- `intro w hw`：引入任意元素 `w`，假設 `w ∈ {a}`
+- `rw [ZFSet.mem_singleton] at hw`：將 `w ∈ {a}` 轉換為 `w = a`
+- `rw [hw]`：將 `w` 重寫為 `a`
+- `rw [ZFSet.mem_union]`：將 `a ∈ A ∪ B` 拆成 `a ∈ A ∨ a ∈ B`
+- `left` 和 `exact ha`：因為 `a ∈ A`，所以 `a ∈ A ∪ B`
+
+**情況 2：`z = {a, b}`**
+- `rw [hz_eq]`：將 `z` 重寫為 `{a, b}`
+- `apply ZFSet.mem_powerset.mpr`：目標變成 `{a, b} ⊆ A ∪ B`
+- `intro w hw`：引入任意元素 `w`，假設 `w ∈ {a, b}`
+- `rw [ZFSet.mem_pair] at hw`：將 `w ∈ {a, b}` 拆成 `w = a ∨ w = b`
+- `cases hw`：分情況討論
+  - `inl hw_eq`：`w = a`，使用 `ha` 證明 `a ∈ A ∪ B`
+  - `inr hw_eq`：`w = b`，使用 `hb` 證明 `b ∈ A ∪ B`
+
+**關鍵理解：**
+- 有序對 `(a, b) = {{a}, {a, b}}` 是 `powerset (powerset (A ∪ B))` 的元素
+- 因為 `{a}` 和 `{a, b}` 都是 `A ∪ B` 的子集合
+- 所以 `{{a}, {a, b}}` 是 `powerset (A ∪ B)` 的子集合
+
+**為什麼這個定義很重要？**
+
+1. **構造有序對**：
+   - 在 ZFC 中，所有東西都必須是集合
+   - Kuratowski 定義提供了一種只用集合來表示有序對的方法
+
+2. **構造笛卡爾積**：
+   - 笛卡爾積是關係和函數的基礎
+   - 在 ZFC 中，關係和函數都定義為有序對的集合
+
+3. **實際應用**：
+   - 笛卡爾積用於定義二元關係
+   - 函數定義為特殊的關係（滿足單值性）
+   - 這是數學中許多概念的基礎
+
+**關鍵技巧總結：**
+
+1. **有序對的構造**：
+   - 使用配對公設構造 `{{a}, {a, b}}`
+   - 這確保了有序對的順序性
+
+2. **笛卡爾積的構造**：
+   - 使用分離公設從足夠大的集合中分離出所有有序對
+   - 使用 `powerset (powerset (A ∪ B))` 作為源集合
+
+3. **成員關係的證明**：
+   - 使用 `ZFSet.mem_sep` 分解分離公設的成員關係
+   - 使用 `ZFSet.mem_powerset.mpr` 證明子集合關係
+   - 使用 `ZFSet.mem_singleton` 處理單元素集合
+   - 使用 `ZFSet.mem_pair` 處理雙元素集合
+
+4. **情況分析**：
+   - 使用 `cases` 處理析取（`z = {a} ∨ z = {a, b}`）
+   - 使用 `cases` 處理析取（`w = a ∨ w = b`）
+
+**記憶要點：**
+- 有序對的定義：`ordered_pair a b = {{a}, {a, b}}`（Kuratowski 定義）
+- 有序對的性質：`(a, b) = (c, d)` 當且僅當 `a = c` 且 `b = d`
+- 笛卡爾積的定義：`product A B = {x | ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b}`
+- 笛卡爾積的成員關係：`x ∈ product A B ↔ ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b`
+- 單元素集合的成員關係：`w ∈ {a} ↔ w = a`（使用 `ZFSet.mem_singleton`）
+- 雙元素集合的成員關係：`w ∈ {a, b} ↔ w = a ∨ w = b`（使用 `ZFSet.mem_pair`）
+- 冪集的成員關係：`x ∈ powerset A ↔ x ⊆ A`（使用 `ZFSet.mem_powerset`）
+- 分離公設的成員關係：`x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x`（使用 `ZFSet.mem_sep`）
+
+---
+
+### 範例 18：笛卡爾積對聯集的分配律
+
+**定理：** `A × (B ∪ C) = (A × B) ∪ (A × C)`，即 `product A (B ∪ C) = product A B ∪ product A C`
+
+這是笛卡爾積對聯集的分配律。它說明：集合 `A` 與 `B` 和 `C` 的聯集的笛卡爾積，等於 `A` 與 `B` 的笛卡爾積和 `A` 與 `C` 的笛卡爾積的聯集。
+
+這個定理展示了：
+- 笛卡爾積運算與聯集運算之間的關係
+- 如何使用笛卡爾積的成員關係進行證明
+- 如何使用情況分析處理聯集成員關係
+- 如何使用 `rcases` 處理嵌套的存在量詞
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_3_a (A B C : ZFSet) : product A (B ∪ C) = product A B ∪ product A C := by
+  apply ZFSet.ext -- 根據外延性公設，將 product A (B ∪ C) = product A B ∪ product A C 轉換為 ∀ x, x ∈ product A (B ∪ C) ↔ x ∈ product A B ∪ product A C
+  intro x -- x : any arbitrary element
+  constructor -- 將 ↔ 分成兩個部分
+  · intro hx_product -- hx_product : x ∈ product A (B ∪ C)
+    -- x ∈ product A (B ∪ C) → x ∈ product A B ∪ product A C
+    rw [product] at hx_product -- 展開 product 的定義
+    rw [ZFSet.mem_sep] at hx_product -- 使用分離公設的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
+    rcases hx_product with ⟨hx_in_powerset, h_exists⟩ -- 分解分離公設的成員關係，h_exists : ∃ a ∈ A, ∃ b ∈ B ∪ C, x = ordered_pair a b
+    rcases h_exists with ⟨a, ha, b, hb, hx_eq⟩ -- 分解存在量詞，得到 a ∈ A, b ∈ B ∪ C, hx_eq : x = ordered_pair a b
+    -- 現在我們有：a ∈ A, b ∈ B ∪ C, x = ordered_pair a b
+    rw [ZFSet.mem_union] at hb -- 將 b ∈ B ∪ C 拆成 b ∈ B ∨ b ∈ C
+    cases hb with
+    | inl hb_B => -- 情況1：b ∈ B
+      have hx_in_product_B : x ∈ product A B := by -- 證明 x ∈ product A B
+        rw [mem_product, hx_eq] -- 使用笛卡爾積的成員關係，並將 x 重寫為 ordered_pair a b
+        exact ⟨a, ha, b, hb_B, rfl⟩ -- ordered_pair a b = ordered_pair a b, a ∈ A, b ∈ B
+      exact ZFSet.mem_union.mpr (Or.inl hx_in_product_B) -- x ∈ product A B，所以 x ∈ product A B ∪ product A C
+    | inr hb_C => -- 情況2：b ∈ C
+      have hx_in_product_C : x ∈ product A C := by -- 證明 x ∈ product A C
+        rw [mem_product, hx_eq] -- 使用笛卡爾積的成員關係，並將 x 重寫為 ordered_pair a b
+        exact ⟨a, ha, b, hb_C, rfl⟩ -- ordered_pair a b = ordered_pair a b, a ∈ A, b ∈ C
+      exact ZFSet.mem_union.mpr (Or.inr hx_in_product_C) -- x ∈ product A C，所以 x ∈ product A B ∪ product A C
+  · intro hx_union -- hx_union : x ∈ product A B ∪ product A C
+    -- x ∈ product A B ∪ product A C → x ∈ product A (B ∪ C)
+    rw [ZFSet.mem_union] at hx_union -- 將 x ∈ product A B ∪ product A C 拆成 x ∈ product A B ∨ x ∈ product A C
+    cases hx_union with
+    | inl hx_product_B => -- 情況1：x ∈ product A B
+      rw [mem_product] at hx_product_B -- 使用笛卡爾積的成員關係，得到 ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b
+      rcases hx_product_B with ⟨a, ha, b, hb, rfl⟩ -- 分解存在量詞，得到 a ∈ A, b ∈ B, x = ordered_pair a b
+      have hb_union : b ∈ B ∪ C := ZFSet.mem_union.mpr (Or.inl hb) -- b ∈ B，所以 b ∈ B ∪ C
+      rw [mem_product] -- 使用笛卡爾積的成員關係
+      exact ⟨a, ha, b, hb_union, rfl⟩ -- x = ordered_pair a b, a ∈ A, b ∈ B ∪ C
+    | inr hx_product_C => -- 情況2：x ∈ product A C
+      rw [mem_product] at hx_product_C -- 使用笛卡爾積的成員關係，得到 ∃ a ∈ A, ∃ b ∈ C, x = ordered_pair a b
+      rcases hx_product_C with ⟨a, ha, b, hb, rfl⟩ -- 分解存在量詞，得到 a ∈ A, b ∈ C, x = ordered_pair a b
+      have hb_union : b ∈ B ∪ C := ZFSet.mem_union.mpr (Or.inr hb) -- b ∈ C，所以 b ∈ B ∪ C
+      rw [mem_product] -- 使用笛卡爾積的成員關係
+      exact ⟨a, ha, b, hb_union, rfl⟩ -- x = ordered_pair a b, a ∈ A, b ∈ B ∪ C
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`x ∈ product A (B ∪ C) → x ∈ product A B ∪ product A C`
+
+**目標：** 證明如果 `x ∈ product A (B ∪ C)`，則 `x ∈ product A B ∪ product A C`
+
+**步驟 1：展開定義並分解成員關係**
+- `rw [product] at hx_product`：展開 `product` 的定義，得到 `x ∈ ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ B ∪ C, x = ordered_pair a b) (powerset (powerset (A ∪ B ∪ C)))`
+- `rw [ZFSet.mem_sep] at hx_product`：使用分離公設的成員關係，得到 `x ∈ powerset (powerset (A ∪ B ∪ C)) ∧ ∃ a ∈ A, ∃ b ∈ B ∪ C, x = ordered_pair a b`
+- `rcases hx_product with ⟨hx_in_powerset, h_exists⟩`：分解合取，得到 `h_exists : ∃ a ∈ A, ∃ b ∈ B ∪ C, x = ordered_pair a b`
+
+**步驟 2：分解嵌套的存在量詞**
+- `rcases h_exists with ⟨a, ha, b, hb, hx_eq⟩`：使用 `rcases` 一次性分解嵌套的存在量詞
+  - `a : ZFSet`：存在的元素 `a`
+  - `ha : a ∈ A`：`a` 屬於 `A` 的證明
+  - `b : ZFSet`：存在的元素 `b`
+  - `hb : b ∈ B ∪ C`：`b` 屬於 `B ∪ C` 的證明
+  - `hx_eq : x = ordered_pair a b`：`x` 等於 `ordered_pair a b` 的證明
+
+**為什麼使用 `rcases` 而不是嵌套的 `cases`？**
+
+- `∃ a ∈ A, ∃ b ∈ B ∪ C, x = ordered_pair a b` 是嵌套的存在量詞
+- `∃ a ∈ A` 實際上是 `∃ a, a ∈ A ∧ ...` 的簡寫
+- `cases` 一次只能處理一個存在量詞，需要嵌套使用
+- `rcases` 可以一次性處理多個嵌套的存在量詞，更簡潔
+
+**步驟 3：分解聯集成員關係**
+- `rw [ZFSet.mem_union] at hb`：將 `b ∈ B ∪ C` 轉換為 `b ∈ B ∨ b ∈ C`
+- `cases hb`：分情況討論
+
+**情況 1：`b ∈ B`**
+- `inl hb_B`：`hb_B : b ∈ B`
+- `have hx_in_product_B : x ∈ product A B`：證明 `x ∈ product A B`
+  - `rw [mem_product, hx_eq]`：
+    - `mem_product`：展開 `mem_product` 定理，目標變成 `∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b`
+    - `hx_eq`：將 `x` 重寫為 `ordered_pair a b`，目標變成 `∃ a ∈ A, ∃ b ∈ B, ordered_pair a b = ordered_pair a b`
+  - `exact ⟨a, ha, b, hb_B, rfl⟩`：構造存在量詞
+    - `a`：存在的元素 `a`
+    - `ha`：`a ∈ A` 的證明
+    - `b`：存在的元素 `b`
+    - `hb_B`：`b ∈ B` 的證明
+    - `rfl`：`ordered_pair a b = ordered_pair a b` 的證明（自反性）
+- `exact ZFSet.mem_union.mpr (Or.inl hx_in_product_B)`：因為 `x ∈ product A B`，所以 `x ∈ product A B ∪ product A C`（使用 `Or.inl` 選擇左分支）
+
+**情況 2：`b ∈ C`**
+- `inr hb_C`：`hb_C : b ∈ C`
+- `have hx_in_product_C : x ∈ product A C`：證明 `x ∈ product A C`
+  - 類似情況 1，但使用 `hb_C : b ∈ C`
+- `exact ZFSet.mem_union.mpr (Or.inr hx_in_product_C)`：因為 `x ∈ product A C`，所以 `x ∈ product A B ∪ product A C`（使用 `Or.inr` 選擇右分支）
+
+**關鍵理解：**
+- 如果 `x ∈ product A (B ∪ C)`，則存在 `a ∈ A` 和 `b ∈ B ∪ C`，使得 `x = (a, b)`
+- 因為 `b ∈ B ∪ C`，所以 `b ∈ B` 或 `b ∈ C`
+- 如果 `b ∈ B`，則 `x ∈ product A B`
+- 如果 `b ∈ C`，則 `x ∈ product A C`
+- 因此 `x ∈ product A B ∪ product A C`
+
+#### 第二個方向：`x ∈ product A B ∪ product A C → x ∈ product A (B ∪ C)`
+
+**目標：** 證明如果 `x ∈ product A B ∪ product A C`，則 `x ∈ product A (B ∪ C)`
+
+**步驟 1：分解聯集成員關係**
+- `rw [ZFSet.mem_union] at hx_union`：將 `x ∈ product A B ∪ product A C` 轉換為 `x ∈ product A B ∨ x ∈ product A C`
+- `cases hx_union`：分情況討論
+
+**情況 1：`x ∈ product A B`**
+- `inl hx_product_B`：`hx_product_B : x ∈ product A B`
+- `rw [mem_product] at hx_product_B`：使用笛卡爾積的成員關係，得到 `∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b`
+- `rcases hx_product_B with ⟨a, ha, b, hb, rfl⟩`：分解存在量詞
+  - `a : ZFSet`：存在的元素 `a`
+  - `ha : a ∈ A`：`a` 屬於 `A` 的證明
+  - `b : ZFSet`：存在的元素 `b`
+  - `hb : b ∈ B`：`b` 屬於 `B` 的證明
+  - `rfl`：`x = ordered_pair a b` 的證明（這裡使用 `rfl` 會自動將 `x` 重寫為 `ordered_pair a b`）
+- `have hb_union : b ∈ B ∪ C`：證明 `b ∈ B ∪ C`
+  - `ZFSet.mem_union.mpr (Or.inl hb)`：因為 `b ∈ B`，所以 `b ∈ B ∪ C`（使用 `Or.inl` 選擇左分支）
+- `rw [mem_product]`：使用笛卡爾積的成員關係，目標變成 `∃ a ∈ A, ∃ b ∈ B ∪ C, x = ordered_pair a b`
+- `exact ⟨a, ha, b, hb_union, rfl⟩`：構造存在量詞
+  - `a`：存在的元素 `a`
+  - `ha`：`a ∈ A` 的證明
+  - `b`：存在的元素 `b`
+  - `hb_union`：`b ∈ B ∪ C` 的證明
+  - `rfl`：`x = ordered_pair a b` 的證明
+
+**情況 2：`x ∈ product A C`**
+- `inr hx_product_C`：`hx_product_C : x ∈ product A C`
+- 類似情況 1，但使用 `hb : b ∈ C` 和 `Or.inr` 來證明 `b ∈ B ∪ C`
+
+**關鍵理解：**
+- 如果 `x ∈ product A B ∪ product A C`，則 `x ∈ product A B` 或 `x ∈ product A C`
+- 如果 `x ∈ product A B`，則存在 `a ∈ A` 和 `b ∈ B`，使得 `x = (a, b)`
+- 因為 `b ∈ B`，所以 `b ∈ B ∪ C`
+- 因此 `x ∈ product A (B ∪ C)`
+- 類似地，如果 `x ∈ product A C`，也可以證明 `x ∈ product A (B ∪ C)`
+
+**為什麼這個定理很重要？**
+
+1. **展示分配律**：
+   - 這是笛卡爾積運算的一個基本性質
+   - 類似於數的乘法對加法的分配律：`a × (b + c) = a × b + a × c`
+
+2. **實際應用**：
+   - 在處理關係和函數時，經常需要處理笛卡爾積的運算
+   - 這個定理允許我們將複雜的笛卡爾積表達式分解為更簡單的形式
+
+3. **直觀理解**：
+   - `A × (B ∪ C)` 包含所有形如 `(a, b)` 的有序對，其中 `a ∈ A` 且 `b ∈ B` 或 `b ∈ C`
+   - `(A × B) ∪ (A × C)` 包含所有形如 `(a, b)` 的有序對，其中 `a ∈ A` 且 `b ∈ B`，或者 `a ∈ A` 且 `b ∈ C`
+   - 這兩個集合包含相同的元素
+
+**關鍵技巧總結：**
+
+1. **使用 `rcases` 處理嵌套的存在量詞**：
+   - `rcases h_exists with ⟨a, ha, b, hb, hx_eq⟩` 可以一次性分解多個嵌套的存在量詞
+   - 比嵌套的 `cases` 更簡潔和易讀
+
+2. **使用 `rfl` 進行等式重寫**：
+   - 在 `rcases` 中使用 `rfl` 可以自動將變數重寫為等式的右邊
+   - 例如：`rcases h with ⟨a, ha, rfl⟩` 會將目標中的變數重寫為 `a`
+
+3. **情況分析的使用**：
+   - 使用 `cases` 處理析取（`b ∈ B ∨ b ∈ C`）
+   - 使用 `cases` 處理析取（`x ∈ product A B ∨ x ∈ product A C`）
+
+4. **構造存在量詞**：
+   - 使用 `⟨a, ha, b, hb, rfl⟩` 構造存在量詞
+   - 需要提供存在的元素和它們滿足條件的證明
+
+5. **使用 `have` 建立中間結果**：
+   - 使用 `have` 來建立中間步驟，使證明更清晰
+   - 例如：`have hx_in_product_B : x ∈ product A B := by ...`
+
+**記憶要點：**
+- `A × (B ∪ C) = (A × B) ∪ (A × C)` 是笛卡爾積對聯集的分配律
+- 證明時需要使用外延性公理
+- 第一個方向：如果 `x ∈ product A (B ∪ C)`，則 `x ∈ product A B ∪ product A C`
+- 第二個方向：如果 `x ∈ product A B ∪ product A C`，則 `x ∈ product A (B ∪ C)`
+- 使用 `rcases` 處理嵌套的存在量詞：`rcases h with ⟨a, ha, b, hb, hx_eq⟩`
+- 使用 `cases` 處理析取：`cases hb with | inl hb_B => ... | inr hb_C => ...`
+- 使用 `rfl` 進行等式重寫：在 `rcases` 中使用 `rfl` 可以自動重寫變數
+- 使用 `have` 建立中間結果：使證明更清晰和易讀
+- 笛卡爾積的成員關係：`x ∈ product A B ↔ ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b`
+- 聯集的成員關係：`x ∈ A ∪ B ↔ x ∈ A ∨ x ∈ B`
 
 ---
 
