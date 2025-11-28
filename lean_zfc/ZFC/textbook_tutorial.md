@@ -20,7 +20,9 @@
    - [綜合範例：子集合關係與集合相等的等價關係（交集版本）](#49-綜合範例子集合關係與集合相等的等價關係交集版本)
 5. [常見證明模式](#常見證明模式)
 6. [完整證明範例](#完整證明範例)
-7. [常用技巧總結](#常用技巧總結)
+7. [有序對與笛卡爾積](#有序對與笛卡爾積)
+8. [集合族的聯集與交集](#集合族的聯集與交集)
+9. [常用技巧總結](#常用技巧總結)
 
 ---
 
@@ -4161,7 +4163,242 @@ theorem mem_product (A B x : ZFSet) : x ∈ product A B ↔ ∃ a ∈ A, ∃ b �
 
 ---
 
-### 範例 18：笛卡爾積對聯集的分配律
+### 有序對的單射性質
+
+**定理：** 如果 `ordered_pair a b = ordered_pair a' b'`，則 `a = a'` 且 `b = b'`
+
+這個定理說明了有序對的單射性質：不同的有序對對應不同的集合表示。這是 Kuratowski 定義的核心性質，確保了有序對的唯一性。
+
+**完整證明：**
+
+```lean
+theorem ordered_pair_inj (a b a' b' : ZFSet) : ordered_pair a b = ordered_pair a' b' → a = a' ∧ b = b' := by
+  intro h_eq -- h_eq : ordered_pair a b = ordered_pair a' b'
+  -- 因為 {{a}, {a, b}} = {{a'}, {a', b'}}，所以 {a} ∈ {{a}, {a, b}} 當且僅當 {a} ∈ {{a'}, {a', b'}}
+  have h_a_in : {a} ∈ ordered_pair a b := ZFSet.mem_pair.mpr (Or.inl rfl) -- {a} = {a}，所以 {a} ∈ {{a}, {a, b}}
+  rw [h_eq] at h_a_in -- 因為 ordered_pair a b = ordered_pair a' b'，所以 {a} ∈ {{a'}, {a', b'}}
+  rw [ordered_pair] at h_a_in -- 展開 ordered_pair a' b' 的定義，得到 {a} ∈ {{a'}, {a', b'}}
+  rw [ZFSet.mem_pair] at h_a_in -- 將 {a} ∈ {{a'}, {a', b'}} 拆成 {a} = {a'} ∨ {a} = {a', b'}
+  cases h_a_in with
+  | inl h_eq_singleton => -- 情況1：{a} = {a'}
+    have ha_eq : a = a' := by -- 證明 a = a'
+      have ha_in : a ∈ {a} := ZFSet.mem_singleton.mpr rfl -- a = a，所以 a ∈ {a}
+      rw [h_eq_singleton] at ha_in -- 將 {a} 重寫為 {a'}，得到 a ∈ {a'}
+      rw [ZFSet.mem_singleton] at ha_in -- 將 a ∈ {a'} 轉換為 a = a'
+      exact ha_in -- a = a'
+    -- 現在我們有 a = a'，需要證明 b = b'
+    -- 因為 ordered_pair a b = ordered_pair a' b' 且 a = a'，所以 {{a}, {a, b}} = {{a'}, {a', b'}} = {{a}, {a, b'}}
+    have h_ab_in : {a, b} ∈ ordered_pair a b := ZFSet.mem_pair.mpr (Or.inr rfl) -- {a, b} = {a, b}，所以 {a, b} ∈ {{a}, {a, b}}
+    rw [h_eq] at h_ab_in -- 因為 ordered_pair a b = ordered_pair a' b'，所以 {a, b} ∈ ordered_pair a' b'
+    rw [ordered_pair] at h_ab_in -- 展開 ordered_pair a' b' 的定義，得到 {a, b} ∈ {{a'}, {a', b'}}
+    rw [ha_eq] at h_ab_in -- 將 a' 重寫為 a，得到 {a, b} ∈ {{a}, {a, b'}}
+    rw [ZFSet.mem_pair] at h_ab_in -- 將 {a, b} ∈ {{a}, {a, b'}} 拆成 {a, b} = {a} ∨ {a, b} = {a, b'}
+    cases h_ab_in with
+    | inl h_eq_pair_singleton => -- 情況1.1：{a, b} = {a} 或 {a', b} = {a'}（需要重寫）
+      -- 先將 h_eq_pair_singleton 中的 a' 重寫為 a
+      rw [ha_eq.symm] at h_eq_pair_singleton -- 將 a' 重寫為 a，得到 {a, b} = {a}（因為 ha_eq : a = a'，所以 ha_eq.symm : a' = a）
+      -- 這意味著 {a, b} 只有一個元素 a，所以 b = a
+      have hb_eq_a : b = a := by -- 證明 b = a
+        -- 因為 {a, b} = {a}，所以 b ∈ {a, b} 當且僅當 b ∈ {a}
+        have hb_in_pair : b ∈ {a, b} := ZFSet.mem_pair.mpr (Or.inr rfl) -- b = b，所以 b ∈ {a, b}
+        -- 使用 h_eq_pair_singleton 將 {a, b} 替換為 {a}
+        -- 因為 {a, b} = {a}，所以 b ∈ {a, b} 意味著 b ∈ {a}
+        rw [h_eq_pair_singleton] at hb_in_pair -- 將 {a, b} 重寫為 {a}，得到 b ∈ {a}
+        rw [ZFSet.mem_singleton] at hb_in_pair -- 將 b ∈ {a} 轉換為 b = a
+        exact hb_in_pair -- b = a
+      -- 類似地，{a, b'} = {a}，所以 b' = a
+      have hb'_eq_a : b' = a := by -- 證明 b' = a
+        -- 因為 ordered_pair a b = ordered_pair a' b' 且 a = a'，所以 ordered_pair a b = ordered_pair a b'
+        have h_eq_ab' : ordered_pair a b = ordered_pair a b' := by -- 證明 ordered_pair a b = ordered_pair a b'
+          -- 從 h_eq : ordered_pair a b = ordered_pair a' b' 和 ha_eq : a = a'，我們可以得到 ordered_pair a b = ordered_pair a b'
+          -- 因為 a = a'，所以 ordered_pair a' b' = ordered_pair a b'
+          have h_eq_right : ordered_pair a' b' = ordered_pair a b' := by -- 證明 ordered_pair a' b' = ordered_pair a b'
+            rw [ha_eq] -- 將 a' 重寫為 a
+          -- 使用等式的傳遞性：ordered_pair a b = ordered_pair a' b' = ordered_pair a b'
+          exact Eq.trans h_eq h_eq_right -- ordered_pair a b = ordered_pair a b'
+        have h_ab'_in : {a, b'} ∈ ordered_pair a b' := ZFSet.mem_pair.mpr (Or.inr rfl) -- {a, b'} = {a, b'}，所以 {a, b'} ∈ {{a}, {a, b'}}
+        rw [← h_eq_ab', ordered_pair] at h_ab'_in -- 因為 ordered_pair a b = ordered_pair a b'，展開定義得到 {a, b'} ∈ {{a}, {a, b}}
+        rw [ZFSet.mem_pair] at h_ab'_in -- 將 {a, b'} ∈ {{a}, {a, b}} 拆成 {a, b'} = {a} ∨ {a, b'} = {a, b}
+        cases h_ab'_in with
+        | inl h => -- {a, b'} = {a}
+          have hb'_in : b' ∈ {a, b'} := ZFSet.mem_pair.mpr (Or.inr rfl) -- b' = b'，所以 b' ∈ {a, b'}
+          rw [h] at hb'_in -- 將 {a, b'} 重寫為 {a}，得到 b' ∈ {a}
+          rw [ZFSet.mem_singleton] at hb'_in -- 將 b' ∈ {a} 轉換為 b' = a
+          exact hb'_in -- b' = a
+        | inr h => -- {a, b'} = {a, b}
+          have hb'_in : b' ∈ {a, b'} := ZFSet.mem_pair.mpr (Or.inr rfl) -- b' = b'，所以 b' ∈ {a, b'}
+          rw [h] at hb'_in -- 將 {a, b'} 重寫為 {a, b}，得到 b' ∈ {a, b}
+          -- 因為 h_eq_pair_singleton : {a, b} = {a}，所以 b' ∈ {a, b} 意味著 b' ∈ {a}
+          rw [h_eq_pair_singleton] at hb'_in -- 將 {a, b} 重寫為 {a}，得到 b' ∈ {a}
+          rw [ZFSet.mem_singleton] at hb'_in -- 將 b' ∈ {a} 轉換為 b' = a
+          exact hb'_in -- b' = a
+      rw [hb_eq_a, hb'_eq_a] -- 將 b 和 b' 都重寫為 a
+      exact ⟨ha_eq, rfl⟩ -- a = a' 且 a = a
+    | inr h_eq_pair => -- 情況1.2：{a, b} = {a', b'}（注意：這裡的 {a', b'} 需要重寫為 {a, b'}）
+      -- 這意味著 {a, b} 和 {a, b'} 有相同的元素
+      have hb_eq_b' : b = b' := by -- 證明 b = b'
+        -- 因為 {a, b} = {a', b'}，所以 b ∈ {a, b} 當且僅當 b ∈ {a', b'}
+        have hb_in : b ∈ {a, b} := ZFSet.mem_pair.mpr (Or.inr rfl) -- b = b，所以 b ∈ {a, b}
+        -- h_eq_pair 是 {a, b} = {a', b'}，需要將 a' 重寫為 a
+        rw [ha_eq.symm] at h_eq_pair -- 將 a' 重寫為 a，得到 {a, b} = {a, b'}
+        rw [h_eq_pair] at hb_in -- 將 {a, b} 重寫為 {a, b'}，得到 b ∈ {a, b'}
+        rw [ZFSet.mem_pair] at hb_in -- 將 b ∈ {a, b'} 拆成 b = a ∨ b = b'
+        cases hb_in with
+        | inl hb_eq_a => -- 情況1.2.1：b = a
+          -- 類似地，b' ∈ {a, b'}，所以 b' = a 或 b' = b'
+          have hb'_in : b' ∈ {a, b'} := ZFSet.mem_pair.mpr (Or.inr rfl) -- b' = b'，所以 b' ∈ {a, b'}
+          rw [← h_eq_pair] at hb'_in -- 將 {a, b'} 重寫為 {a, b}，得到 b' ∈ {a, b}
+          rw [ZFSet.mem_pair] at hb'_in -- 將 b' ∈ {a, b} 拆成 b' = a ∨ b' = b
+          cases hb'_in with
+          | inl hb'_eq_a => rw [hb_eq_a, hb'_eq_a] -- b = a 且 b' = a，所以 b = b'
+          | inr hb'_eq_b => -- b' = b
+            rw [hb_eq_a] at hb'_eq_b -- 將 b 重寫為 a，得到 b' = a
+            rw [hb'_eq_b] -- 將 b' 重寫為 a，目標變成 b = a
+            exact hb_eq_a -- b = a
+        | inr hb_eq_b' => exact hb_eq_b' -- b = b'，直接成立
+      exact ⟨ha_eq, hb_eq_b'⟩ -- a = a' 且 b = b'
+  | inr h_eq_singleton_pair => -- 情況2：{a} = {a', b'}
+    -- 這意味著 {a} 有兩個元素 a' 和 b'，但 {a} 只有一個元素 a，所以 a' = b' = a
+    have ha'_in : a' ∈ {a', b'} := ZFSet.mem_pair.mpr (Or.inl rfl) -- a' = a'，所以 a' ∈ {a', b'}
+    rw [← h_eq_singleton_pair] at ha'_in -- 將 {a', b'} 重寫為 {a}，得到 a' ∈ {a}
+    rw [ZFSet.mem_singleton] at ha'_in -- 將 a' ∈ {a} 轉換為 a' = a
+    have hb'_in : b' ∈ {a', b'} := ZFSet.mem_pair.mpr (Or.inr rfl) -- b' = b'，所以 b' ∈ {a', b'}
+    rw [← h_eq_singleton_pair] at hb'_in -- 將 {a', b'} 重寫為 {a}，得到 b' ∈ {a}
+    rw [ZFSet.mem_singleton] at hb'_in -- 將 b' ∈ {a} 轉換為 b' = a
+    -- 現在我們有 a' = a 且 b' = a，所以 ordered_pair a' b' = {{a}, {a, a}} = {{a}}
+    -- 類似地，我們需要證明 a = a' 且 b = a
+    have h_ab_in : {a, b} ∈ ordered_pair a b := ZFSet.mem_pair.mpr (Or.inr rfl) -- {a, b} = {a, b}，所以 {a, b} ∈ {{a}, {a, b}}
+    rw [h_eq] at h_ab_in -- 因為 ordered_pair a b = ordered_pair a' b'，所以 {a, b} ∈ ordered_pair a' b'
+    rw [ordered_pair] at h_ab_in -- 展開 ordered_pair a' b' 的定義，得到 {a, b} ∈ {{a'}, {a', b'}}
+    rw [ha'_in, hb'_in] at h_ab_in -- 將 a' 和 b' 都重寫為 a，得到 {a, b} ∈ {{a}, {a, a}}
+    -- 注意：{a, a} = {a}，所以 {{a}, {a, a}} = {{a}}
+    have h_pair_eq : ({a, a} : ZFSet) = ({a} : ZFSet) := by -- 證明 {a, a} = {a}，明確類型為 ZFSet
+      apply ZFSet.ext -- 使用外延性公設
+      intro x -- x : any arbitrary element
+      constructor -- 將 ↔ 分成兩個部分
+      · intro hx_aa -- hx_aa : x ∈ {a, a}
+        rw [ZFSet.mem_pair] at hx_aa -- 將 x ∈ {a, a} 拆成 x = a ∨ x = a
+        cases hx_aa with
+        | inl hx_eq => -- x = a
+          rw [ZFSet.mem_singleton] -- 將目標 x ∈ {a} 轉換為 x = a
+          exact hx_eq -- x = a
+        | inr hx_eq => -- x = a
+          rw [ZFSet.mem_singleton] -- 將目標 x ∈ {a} 轉換為 x = a
+          exact hx_eq -- x = a
+      · intro hx_a -- hx_a : x ∈ {a}
+        rw [ZFSet.mem_singleton] at hx_a -- 將 x ∈ {a} 轉換為 x = a
+        rw [hx_a] -- 將 x 重寫為 a
+        rw [ZFSet.mem_pair] -- 將 a ∈ {a, a} 拆成 a = a ∨ a = a
+        left
+        rfl -- a = a
+    rw [h_pair_eq] at h_ab_in -- 將 {a, a} 重寫為 {a}，得到 {a, b} ∈ {{a}}
+    rw [ZFSet.mem_pair] at h_ab_in -- 將 {a, b} ∈ {{a}} 拆成 {a, b} = {a} ∨ {a, b} = {a}
+    cases h_ab_in with
+    | inl h => -- {a, b} = {a}
+      have hb_eq_a : b = a := by -- 證明 b = a
+        have hb_in : b ∈ {a, b} := ZFSet.mem_pair.mpr (Or.inr rfl) -- b = b，所以 b ∈ {a, b}
+        rw [h] at hb_in -- 將 {a, b} 重寫為 {a}，得到 b ∈ {a}
+        rw [ZFSet.mem_singleton] at hb_in -- 將 b ∈ {a} 轉換為 b = a
+        exact hb_in -- b = a
+      rw [ha'_in, hb'_in, hb_eq_a] -- 將 a', b', b 都重寫為 a
+      exact ⟨rfl, rfl⟩ -- a = a 且 a = a
+```
+
+**詳細步驟解析：**
+
+#### 第一步：證明 `a = a'`
+
+**目標：** 從 `ordered_pair a b = ordered_pair a' b'` 推導出 `a = a'`
+
+**策略：** 利用 `{a}` 是 `ordered_pair a b` 的元素，所以它也是 `ordered_pair a' b'` 的元素。
+
+**步驟：**
+1. `have h_a_in : {a} ∈ ordered_pair a b`：因為 `{a} = {a}`，所以 `{a} ∈ {{a}, {a, b}}`
+2. `rw [h_eq] at h_a_in`：因為 `ordered_pair a b = ordered_pair a' b'`，所以 `{a} ∈ ordered_pair a' b'`
+3. `rw [ordered_pair] at h_a_in`：展開定義，得到 `{a} ∈ {{a'}, {a', b'}}`
+4. `rw [ZFSet.mem_pair] at h_a_in`：將成員關係拆成 `{a} = {a'} ∨ {a} = {a', b'}`
+5. `cases h_a_in`：分情況討論
+
+**情況 1：`{a} = {a'}`**
+- 使用外延性公設：`a ∈ {a}` 當且僅當 `a ∈ {a'}`
+- 因為 `a ∈ {a}`，所以 `a ∈ {a'}`，即 `a = a'`
+
+**情況 2：`{a} = {a', b'}`**
+- 這意味著 `{a}` 有兩個元素 `a'` 和 `b'`
+- 但 `{a}` 只有一個元素 `a`，所以 `a' = b' = a`
+- 因此 `a = a'`（因為 `a' = a`）
+
+#### 第二步：證明 `b = b'`
+
+**目標：** 在已知 `a = a'` 的情況下，證明 `b = b'`
+
+**策略：** 利用 `{a, b}` 是 `ordered_pair a b` 的元素，所以它也是 `ordered_pair a' b'` 的元素。
+
+**步驟：**
+1. `have h_ab_in : {a, b} ∈ ordered_pair a b`：因為 `{a, b} = {a, b}`，所以 `{a, b} ∈ {{a}, {a, b}}`
+2. `rw [h_eq] at h_ab_in`：因為 `ordered_pair a b = ordered_pair a' b'`，所以 `{a, b} ∈ ordered_pair a' b'`
+3. `rw [ordered_pair] at h_ab_in`：展開定義，得到 `{a, b} ∈ {{a'}, {a', b'}}`
+4. `rw [ha_eq] at h_ab_in`：將 `a'` 重寫為 `a`，得到 `{a, b} ∈ {{a}, {a, b'}}`
+5. `rw [ZFSet.mem_pair] at h_ab_in`：將成員關係拆成 `{a, b} = {a} ∨ {a, b} = {a, b'}`
+6. `cases h_ab_in`：分情況討論
+
+**情況 1.1：`{a, b} = {a}`**
+- 這意味著 `{a, b}` 只有一個元素 `a`，所以 `b = a`
+- 類似地，我們可以證明 `b' = a`
+- 因此 `b = b'`（因為 `b = a = b'`）
+
+**情況 1.2：`{a, b} = {a, b'}`**
+- 這意味著 `{a, b}` 和 `{a, b'}` 有相同的元素
+- 因為 `b ∈ {a, b}`，所以 `b ∈ {a, b'}`，即 `b = a` 或 `b = b'`
+- 如果 `b = a`，則類似地可以證明 `b' = a`，所以 `b = b'`
+- 如果 `b = b'`，則直接成立
+
+**關鍵技巧：**
+
+1. **使用成員關係**：
+   - `{a} ∈ ordered_pair a b` 和 `{a, b} ∈ ordered_pair a b` 是關鍵觀察
+   - 利用等式的傳遞性：如果 `ordered_pair a b = ordered_pair a' b'`，則它們的元素相同
+
+2. **重寫變數**：
+   - 使用 `rw [ha_eq]` 將 `a'` 重寫為 `a`
+   - 使用 `rw [ha_eq.symm]` 將 `a'` 重寫為 `a`（當需要反向重寫時）
+
+3. **情況分析**：
+   - 使用 `cases` 處理析取（`{a} = {a'} ∨ {a} = {a', b'}`）
+   - 使用 `cases` 處理析取（`{a, b} = {a} ∨ {a, b} = {a, b'}`）
+
+4. **處理特殊情況**：
+   - 當 `{a, b} = {a}` 時，需要證明 `b = a`
+   - 當 `{a} = {a', b'}` 時，需要證明 `a' = b' = a`
+   - 當 `{a, a} = {a}` 時，需要使用外延性公設證明
+
+5. **等式的傳遞性**：
+   - 使用 `Eq.trans` 證明 `ordered_pair a b = ordered_pair a' b' = ordered_pair a b'`
+
+**為什麼這個證明很重要？**
+
+1. **確保有序對的唯一性**：
+   - 不同的有序對對應不同的集合表示
+   - 這是 Kuratowski 定義的核心性質
+
+2. **支持笛卡爾積的構造**：
+   - 有序對的單射性質確保了笛卡爾積中沒有重複的元素
+   - 這對於後續定義關係和函數非常重要
+
+3. **證明技巧的綜合應用**：
+   - 這個證明綜合運用了成員關係、外延性公設、情況分析等多種技巧
+   - 是學習集合論證明的優秀範例
+
+**記憶要點：**
+- 有序對的單射性質：`ordered_pair a b = ordered_pair a' b' → a = a' ∧ b = b'`
+- 關鍵觀察：`{a} ∈ ordered_pair a b` 和 `{a, b} ∈ ordered_pair a b`
+- 重寫技巧：使用 `ha_eq.symm` 將 `a'` 重寫為 `a`
+- 情況分析：處理 `{a} = {a'} ∨ {a} = {a', b'}` 和 `{a, b} = {a} ∨ {a, b} = {a, b'}`
+- 特殊情況：`{a, a} = {a}` 需要使用外延性公設證明
+
+---
+
+### 範例 17：笛卡爾積對聯集的分配律
 
 **定理：** `A × (B ∪ C) = (A × B) ∪ (A × C)`，即 `product A (B ∪ C) = product A B ∪ product A C`
 
@@ -4360,6 +4597,727 @@ theorem theorem_2_2_3_a (A B C : ZFSet) : product A (B ∪ C) = product A B ∪ 
 - 使用 `have` 建立中間結果：使證明更清晰和易讀
 - 笛卡爾積的成員關係：`x ∈ product A B ↔ ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b`
 - 聯集的成員關係：`x ∈ A ∪ B ↔ x ∈ A ∨ x ∈ B`
+
+---
+
+### 範例 18：笛卡爾積與空集合
+
+**定理：** `A × ∅ = ∅`，即 `product A ∅ = ∅`
+
+這個定理說明：任何集合 `A` 與空集合的笛卡爾積等於空集合。這是因為笛卡爾積 `A × ∅` 中的元素都是有序對 `(a, b)`，其中 `a ∈ A` 且 `b ∈ ∅`。但空集合沒有元素，所以不存在這樣的 `b`，因此 `A × ∅` 是空集合。
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_3_c (A : ZFSet) : product A ∅ = ∅ := by
+  apply ZFSet.ext -- 根據外延性公設，將 product A ∅ = ∅ 轉換為 ∀ x, x ∈ product A ∅ ↔ x ∈ ∅
+  intro x -- x : any arbitrary element
+  constructor -- 將 ↔ 分成兩個方向
+  · intro hx_product -- hx_product : x ∈ product A ∅
+    -- x ∈ product A ∅ → x ∈ ∅
+    rw [product] at hx_product -- 展開 product 的定義：product A ∅ = ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ ∅, x = ordered_pair a b) (ZFSet.powerset (ZFSet.powerset (A ∪ ∅)))
+    rw [ZFSet.mem_sep] at hx_product -- 使用分離公設的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
+    rcases hx_product with ⟨ hx_in_powerset, h_exists ⟩ -- 分解分離公設的成員關係，h_exists : ∃ a ∈ A, ∃ b ∈ ∅, x = ordered_pair a b
+    rcases h_exists with ⟨ a, ha, b, hb, hx_eq ⟩ -- 分解存在量詞，得到 a ∈ A, b ∈ ∅, x = ordered_pair a b
+    -- 現在我們有：x = ordered_pair a b, a ∈ A, b ∈ ∅
+    -- 但空集合沒有元素，所以矛盾
+    exact False.elim (ZFSet.notMem_empty b hb)  -- b ∈ ∅，但空集合沒有元素，所以矛盾
+  · intro hx_empty -- hx_empty : x ∈ ∅
+    -- x ∈ ∅ → x ∈ product A ∅（空真命題：如果 x ∈ ∅，則可以推出任何命題）
+    exact False.elim (ZFSet.notMem_empty x hx_empty) -- x ∈ ∅，但空集合沒有元素，所以矛盾
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`x ∈ product A ∅ → x ∈ ∅`
+
+**目標：** 證明如果 `x ∈ product A ∅`，則 `x ∈ ∅`
+
+**策略：** 使用反證法。假設 `x ∈ product A ∅`，則存在 `a ∈ A` 和 `b ∈ ∅`，使得 `x = ordered_pair a b`。但空集合沒有元素，所以 `b ∈ ∅` 是不可能的，產生矛盾。
+
+**步驟：**
+1. `rw [product] at hx_product`：展開 `product` 的定義，得到 `x ∈ ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ ∅, x = ordered_pair a b) (ZFSet.powerset (ZFSet.powerset (A ∪ ∅)))`
+2. `rw [ZFSet.mem_sep] at hx_product`：使用分離公設的成員關係，得到 `x ∈ powerset (powerset (A ∪ ∅)) ∧ ∃ a ∈ A, ∃ b ∈ ∅, x = ordered_pair a b`
+3. `rcases hx_product with ⟨ hx_in_powerset, h_exists ⟩`：分解合取，得到存在量詞 `h_exists : ∃ a ∈ A, ∃ b ∈ ∅, x = ordered_pair a b`
+4. `rcases h_exists with ⟨ a, ha, b, hb, hx_eq ⟩`：分解存在量詞，得到 `a ∈ A`、`b ∈ ∅` 和 `x = ordered_pair a b`
+5. `exact False.elim (ZFSet.notMem_empty b hb)`：因為 `b ∈ ∅` 是不可能的（空集合沒有元素），所以產生矛盾
+
+**關鍵理解：**
+- `ZFSet.notMem_empty b hb` 的簽名是 `(b : ZFSet) → (hb : b ∈ ∅) → False`
+- 第一個參數是屬於空集合的元素（`b`），第二個參數是該元素屬於空集合的證明（`hb`）
+- 這會產生 `False`，然後使用 `False.elim` 推出目標
+
+#### 第二個方向：`x ∈ ∅ → x ∈ product A ∅`
+
+**目標：** 證明如果 `x ∈ ∅`，則 `x ∈ product A ∅`
+
+**策略：** 這是空真命題（vacuous truth）。如果 `x ∈ ∅`，則可以推出任何命題，包括 `x ∈ product A ∅`。但 `x ∈ ∅` 是不可能的（空集合沒有元素），所以直接使用矛盾。
+
+**步驟：**
+1. `intro hx_empty`：引入假設 `hx_empty : x ∈ ∅`
+2. `exact False.elim (ZFSet.notMem_empty x hx_empty)`：因為 `x ∈ ∅` 是不可能的（空集合沒有元素），所以產生矛盾
+
+**關鍵理解：**
+- 空真命題：如果前提是假的，則蘊含式自動為真
+- 但這裡我們直接使用矛盾來完成證明，因為 `x ∈ ∅` 是不可能的
+
+**為什麼這個定理很重要？**
+
+1. **展示笛卡爾積的性質**：
+   - 笛卡爾積 `A × B` 中的元素都是有序對 `(a, b)`，其中 `a ∈ A` 且 `b ∈ B`
+   - 如果 `B = ∅`，則不存在 `b ∈ B`，所以 `A × ∅ = ∅`
+
+2. **反證法的應用**：
+   - 這個證明展示了如何使用反證法
+   - 通過假設存在性，然後推導出矛盾
+
+3. **空真命題的處理**：
+   - 第二個方向展示了如何處理空真命題
+   - 雖然前提是假的，但我們仍然可以完成證明
+
+**關鍵技巧總結：**
+
+1. **使用外延性公設**：
+   - `apply ZFSet.ext`：將集合等式轉換為雙向蘊含
+
+2. **展開定義**：
+   - `rw [product]`：展開 `product` 的定義
+   - `rw [ZFSet.mem_sep]`：使用分離公設的成員關係
+
+3. **分解存在量詞**：
+   - `rcases`：分解嵌套的存在量詞 `∃ a ∈ A, ∃ b ∈ ∅, x = ordered_pair a b`
+
+4. **使用矛盾**：
+   - `ZFSet.notMem_empty b hb`：從 `b ∈ ∅` 推出矛盾
+   - `False.elim`：從矛盾推出任何命題
+
+**記憶要點：**
+- 笛卡爾積與空集合：`A × ∅ = ∅` 和 `∅ × A = ∅`
+- 關鍵觀察：笛卡爾積中的元素都是有序對 `(a, b)`，其中 `a ∈ A` 且 `b ∈ B`
+- 如果 `B = ∅`，則不存在 `b ∈ B`，所以 `A × ∅ = ∅`
+- 使用 `ZFSet.notMem_empty` 處理空集合的成員關係
+- 第一個參數是屬於空集合的元素，第二個參數是該元素屬於空集合的證明
+
+---
+
+### 範例 19：笛卡爾積與交集的關係
+
+**定理：** `(A × B) ∩ (C × D) = (A ∩ C) × (B ∩ D)`，即 `product A B ∩ product C D = product (A ∩ C) (B ∩ D)`
+
+這個定理說明：兩個笛卡爾積的交集等於對應集合的交集的笛卡爾積。這是笛卡爾積與交集運算之間的重要關係。
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_3_d (A B C D : ZFSet) : product A B ∩ product C D = product (A ∩ C) (B ∩ D) := by
+  apply ZFSet.ext -- 根據外延性公設，將 (A ⨯ B) ∩ (C ⨯ D) = (A ∩ C) ⨯ (B ∩ D) 轉換為 ∀ x, x ∈ (A ⨯ B) ∩ (C ⨯ D) ↔ x ∈ (A ∩ C) ⨯ (B ∩ D)
+  intro x -- x : any arbitrary element
+  constructor -- 將 ↔ 分成兩個方向
+  · intro hx_inter -- hx_inter : x ∈ (A ⨯ B) ∩ (C ⨯ D)
+    -- x ∈ (A ⨯ B) ∩ (C ⨯ D) → x ∈ (A ∩ C) ⨯ (B ∩ D)
+    rw [ZFSet.mem_inter] at hx_inter -- 將 x ∈ (A ⨯ B) ∩ (C ⨯ D) 拆成 x ∈ (A ⨯ B) ∧ x ∈ (C ⨯ D)
+    rcases hx_inter with ⟨ hx_in_product_A_B, hx_in_product_C_D ⟩ -- 分解交集成員關係，得到 x ∈ (A ⨯ B) ∧ x ∈ (C ⨯ D)
+    rw [mem_product] at hx_in_product_A_B -- 使用笛卡爾積的成員關係，得到 ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b
+    rcases hx_in_product_A_B with ⟨ a, ha, b, hb_B, hx_eq ⟩ -- 分解存在量詞，得到 a ∈ A, b ∈ B, hx_eq : x = ordered_pair a b
+    -- 現在我們有：x = ordered_pair a b, a ∈ A, b ∈ B
+    rw [mem_product] at hx_in_product_C_D -- 使用笛卡爾積的成員關係，得到 ∃ c ∈ C, ∃ d ∈ D, x = ordered_pair c d
+    rcases hx_in_product_C_D with ⟨ c, hc, d, hd_D, hx_eq2 ⟩ -- 分解存在量詞，得到 c ∈ C, d ∈ D, hx_eq2 : x = ordered_pair c d
+    -- 現在我們有：x = ordered_pair c d, c ∈ C, d ∈ D
+    -- 因為 x = ordered_pair a b ∧ x = ordered_pair c d，所以 ordered_pair a b = ordered_pair c d
+    have h_eq_pair : ordered_pair a b = ordered_pair c d := by
+      rw [← hx_eq] -- 將 ordered_pair a b 重寫為 x
+      exact hx_eq2 -- x = ordered_pair c d
+    -- 使用有序對單射性質，得到 a = c ∧ b = d
+    have h_eq_components : a = c ∧ b = d := ordered_pair_inj a b c d h_eq_pair
+    rcases h_eq_components with ⟨ ha_eq_c, hb_eq_d ⟩ -- 分解等式，得到 a = c ∧ b = d
+    have ha_in_C : a ∈ C := by
+      rw [ha_eq_c] -- 將 a 重寫為 c
+      exact hc -- c ∈ C
+    have hb_in_D : b ∈ D := by
+      rw [hb_eq_d] -- 將 b 重寫為 d
+      exact hd_D -- d ∈ D
+    have ha_in_inter_A_C : a ∈ A ∩ C := ZFSet.mem_inter.mpr ⟨ ha, ha_in_C ⟩ -- a ∈ A ∧ a ∈ C
+    have hb_in_inter_B_D : b ∈ B ∩ D := ZFSet.mem_inter.mpr ⟨ hb_B, hb_in_D ⟩ -- b ∈ B ∧ b ∈ D
+    rw [mem_product] -- 展開目標為 ∃ a' ∈ A ∩ C, ∃ b' ∈ B ∩ D, x = ordered_pair a' b'
+    rw [hx_eq] -- 將 x 重寫為 ordered_pair a b
+    exact ⟨ a, ha_in_inter_A_C, b, hb_in_inter_B_D, rfl ⟩
+  · intro hx_product -- hx_product : x ∈ (A ∩ C) ⨯ (B ∩ D)
+    rw [mem_product] at hx_product -- 使用笛卡爾積的成員關係，得到 ∃ a ∈ A ∩ C, ∃ b ∈ B ∩ D, x = ordered_pair a b
+    rcases hx_product with ⟨ a, ha_in_inter_A_C, b, hb_in_inter_B_D, hx_eq ⟩ -- 分解存在量詞，得到 a ∈ A ∩ C, b ∈ B ∩ D, hx_eq : x = ordered_pair a b
+    rw [ZFSet.mem_inter] at ha_in_inter_A_C -- 將 a ∈ A ∩ C 拆成 a ∈ A ∧ a ∈ C
+    rcases ha_in_inter_A_C with ⟨ ha_in_A, ha_in_C ⟩ -- 分解交集成員關係，得到 a ∈ A ∧ a ∈ C
+    rw [ZFSet.mem_inter] at hb_in_inter_B_D -- 將 b ∈ B ∩ D 拆成 b ∈ B ∧ b ∈ D
+    rcases hb_in_inter_B_D with ⟨ hb_in_B, hb_in_D ⟩ -- 分解交集成員關係，得到 b ∈ B ∧ b ∈ D
+    have hx_in_product_A_B : x ∈ product A B := by
+      rw [mem_product, hx_eq] -- 使用笛卡爾積的成員關係，並將 x 重寫為 ordered_pair a b
+      exact ⟨ a, ha_in_A, b, hb_in_B, rfl ⟩ -- ordered_pair a b = ordered_pair a b, a ∈ A, b ∈ B
+    have hx_in_product_C_D : x ∈ product C D := by
+      rw [mem_product, hx_eq] -- 使用笛卡爾積的成員關係，並將 x 重寫為 ordered_pair a b
+      exact ⟨ a, ha_in_C, b, hb_in_D, rfl ⟩ -- ordered_pair a b = ordered_pair a b, a ∈ C, b ∈ D
+    exact ZFSet.mem_inter.mpr ⟨ hx_in_product_A_B, hx_in_product_C_D ⟩ -- x ∈ (A ⨯ B) ∩ (C ⨯ D)
+```
+
+**詳細步驟解析：**
+
+#### 第一個方向：`x ∈ (A × B) ∩ (C × D) → x ∈ (A ∩ C) × (B ∩ D)`
+
+**目標：** 證明如果 `x` 同時屬於 `A × B` 和 `C × D`，則 `x` 屬於 `(A ∩ C) × (B ∩ D)`
+
+**策略：** 
+1. 從 `x ∈ A × B` 得到 `x = (a, b)`，其中 `a ∈ A, b ∈ B`
+2. 從 `x ∈ C × D` 得到 `x = (c, d)`，其中 `c ∈ C, d ∈ D`
+3. 因為 `(a, b) = (c, d)`，使用有序對的單射性質得到 `a = c` 且 `b = d`
+4. 因此 `a ∈ A ∩ C` 且 `b ∈ B ∩ D`，所以 `x ∈ (A ∩ C) × (B ∩ D)`
+
+**步驟：**
+1. `rw [ZFSet.mem_inter] at hx_inter`：將 `x ∈ (A × B) ∩ (C × D)` 拆成 `x ∈ A × B ∧ x ∈ C × D`
+2. `rcases hx_inter with ⟨ hx_in_product_A_B, hx_in_product_C_D ⟩`：分解合取
+3. `rw [mem_product] at hx_in_product_A_B`：展開 `x ∈ A × B` 為 `∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b`
+4. `rcases hx_in_product_A_B with ⟨ a, ha, b, hb_B, hx_eq ⟩`：分解存在量詞，得到 `a ∈ A, b ∈ B, x = ordered_pair a b`
+5. 類似地，從 `x ∈ C × D` 得到 `c ∈ C, d ∈ D, x = ordered_pair c d`
+6. `have h_eq_pair : ordered_pair a b = ordered_pair c d`：因為 `x = ordered_pair a b` 且 `x = ordered_pair c d`
+7. `have h_eq_components : a = c ∧ b = d := ordered_pair_inj a b c d h_eq_pair`：使用有序對的單射性質
+8. `have ha_in_C : a ∈ C`：因為 `a = c` 且 `c ∈ C`
+9. `have hb_in_D : b ∈ D`：因為 `b = d` 且 `d ∈ D`
+10. `have ha_in_inter_A_C : a ∈ A ∩ C`：因為 `a ∈ A` 且 `a ∈ C`
+11. `have hb_in_inter_B_D : b ∈ B ∩ D`：因為 `b ∈ B` 且 `b ∈ D`
+12. `rw [mem_product]` 和 `exact ⟨ a, ha_in_inter_A_C, b, hb_in_inter_B_D, rfl ⟩`：證明 `x ∈ (A ∩ C) × (B ∩ D)`
+
+**關鍵理解：**
+- 因為 `x` 同時屬於兩個笛卡爾積，所以 `x` 可以表示為兩個不同的有序對
+- 但有序對的唯一性（單射性質）確保這兩個有序對必須相等
+- 因此它們的分量也必須相等
+
+#### 第二個方向：`x ∈ (A ∩ C) × (B ∩ D) → x ∈ (A × B) ∩ (C × D)`
+
+**目標：** 證明如果 `x` 屬於 `(A ∩ C) × (B ∩ D)`，則 `x` 同時屬於 `A × B` 和 `C × D`
+
+**策略：**
+1. 從 `x ∈ (A ∩ C) × (B ∩ D)` 得到 `x = (a, b)`，其中 `a ∈ A ∩ C, b ∈ B ∩ D`
+2. 分解交集得到 `a ∈ A, a ∈ C, b ∈ B, b ∈ D`
+3. 因此 `x ∈ A × B`（因為 `a ∈ A, b ∈ B`）且 `x ∈ C × D`（因為 `a ∈ C, b ∈ D`）
+4. 所以 `x ∈ (A × B) ∩ (C × D)`
+
+**步驟：**
+1. `rw [mem_product] at hx_product`：展開 `x ∈ (A ∩ C) × (B ∩ D)` 為 `∃ a ∈ A ∩ C, ∃ b ∈ B ∩ D, x = ordered_pair a b`
+2. `rcases hx_product with ⟨ a, ha_in_inter_A_C, b, hb_in_inter_B_D, hx_eq ⟩`：分解存在量詞
+3. `rw [ZFSet.mem_inter] at ha_in_inter_A_C`：將 `a ∈ A ∩ C` 拆成 `a ∈ A ∧ a ∈ C`
+4. `rcases ha_in_inter_A_C with ⟨ ha_in_A, ha_in_C ⟩`：分解合取
+5. 類似地，從 `b ∈ B ∩ D` 得到 `b ∈ B` 且 `b ∈ D`
+6. `have hx_in_product_A_B : x ∈ product A B`：因為 `a ∈ A, b ∈ B`
+7. `have hx_in_product_C_D : x ∈ product C D`：因為 `a ∈ C, b ∈ D`
+8. `exact ZFSet.mem_inter.mpr ⟨ hx_in_product_A_B, hx_in_product_C_D ⟩`：構造交集
+
+**關鍵理解：**
+- 如果 `a ∈ A ∩ C`，則 `a` 同時屬於 `A` 和 `C`
+- 如果 `b ∈ B ∩ D`，則 `b` 同時屬於 `B` 和 `D`
+- 因此 `(a, b)` 同時屬於 `A × B` 和 `C × D`
+
+**為什麼這個定理很重要？**
+
+1. **展示笛卡爾積與交集的關係**：
+   - 兩個笛卡爾積的交集等於對應集合的交集的笛卡爾積
+   - 這與聯集的分配律形成對比
+
+2. **有序對單射性質的應用**：
+   - 這個證明展示了如何使用有序對的單射性質
+   - 從有序對的相等推導出分量的相等
+
+3. **交集與笛卡爾積的交互**：
+   - 展示了如何處理交集的成員關係
+   - 展示了如何構造交集的成員關係
+
+**關鍵技巧總結：**
+
+1. **使用有序對的單射性質**：
+   - `ordered_pair_inj`：從 `ordered_pair a b = ordered_pair c d` 得到 `a = c ∧ b = d`
+
+2. **處理變數名衝突**：
+   - 使用不同的變數名（如 `hx_eq` 和 `hx_eq2`）避免衝突
+
+3. **分解交集**：
+   - `rw [ZFSet.mem_inter]`：將 `x ∈ A ∩ B` 拆成 `x ∈ A ∧ x ∈ B`
+   - `rcases`：分解合取
+
+4. **構造交集**：
+   - `ZFSet.mem_inter.mpr`：從 `x ∈ A ∧ x ∈ B` 構造 `x ∈ A ∩ B`
+
+5. **重寫等式**：
+   - `rw [ha_eq_c]`：將 `a` 重寫為 `c`，用於證明 `a ∈ C`
+
+**記憶要點：**
+- 笛卡爾積與交集的關係：`(A × B) ∩ (C × D) = (A ∩ C) × (B ∩ D)`
+- 關鍵觀察：如果 `x` 同時屬於兩個笛卡爾積，則 `x` 可以表示為兩個有序對，但有序對的唯一性確保它們相等
+- 使用 `ordered_pair_inj` 從有序對的相等推導出分量的相等
+- 注意變數名的衝突，使用不同的名稱（如 `hx_eq` 和 `hx_eq2`）
+- 分解交集使用 `rw [ZFSet.mem_inter]` 和 `rcases`
+- 構造交集使用 `ZFSet.mem_inter.mpr`
+
+---
+
+### 範例 20：笛卡爾積與聯集的子集合關係
+
+**定理：** `(A × B) ∪ (C × D) ⊆ (A ∪ C) × (B ∪ D)`，即 `product A B ∪ product C D ⊆ product (A ∪ C) (B ∪ D)`
+
+這個定理說明：兩個笛卡爾積的聯集是對應集合的聯集的笛卡爾積的子集合。注意這是一個單向的子集合關係，不是等價關係。
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_3_e (A B C D : ZFSet) : product A B ∪ product C D ⊆ product (A ∪ C) (B ∪ D) := by
+  rw [ZFSet.subset_def] -- 將 A ⊆ B 轉換為 ∀ x, x ∈ A → x ∈ B
+  intro x hx_union -- x : any arbitrary element, hx_union : x ∈ (A ⨯ B) ∪ (C ⨯ D)
+  -- 目標：證明 x ∈ (A ∪ C) ⨯ (B ∪ D)
+  rw [ZFSet.mem_union] at hx_union -- 將 x ∈ (A ⨯ B) ∪ (C ⨯ D) 拆成 x ∈ (A ⨯ B) ∨ x ∈ (C ⨯ D)
+  cases hx_union with
+    | inl hx_in_product_A_B => -- hx_in_product_A_B : x ∈ (A ⨯ B)
+      rw [mem_product] at hx_in_product_A_B -- 使用笛卡爾積的成員關係，得到 ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b
+      rcases hx_in_product_A_B with ⟨ a, ha, b, hb_B, hx_eq ⟩ -- 分解存在量詞，得到 a ∈ A, b ∈ B, hx_eq : x = ordered_pair a b
+      -- 現在我們有：x = ordered_pair a b, a ∈ A, b ∈ B
+      -- 因為 a ∈ A 所以 a ∈ A ∪ C
+      have ha_in_A_C : a ∈ A ∪ C := ZFSet.mem_union.mpr (Or.inl ha) -- a ∈ A，所以 a ∈ A ∪ C
+      -- 因為 b ∈ B 所以 b ∈ B ∪ D
+      have hb_in_B_D : b ∈ B ∪ D := ZFSet.mem_union.mpr (Or.inl hb_B) -- b ∈ B，所以 b ∈ B ∪ D
+      rw [mem_product] -- 使用笛卡爾積的成員關係，目標變成 ∃ a' ∈ A ∪ C, ∃ b' ∈ B ∪ D, x = ordered_pair a' b'
+      rw [hx_eq] -- 將 x = ordered_pair a b 重寫為 x = ordered_pair a' b'
+      exact ⟨ a, ha_in_A_C, b, hb_in_B_D, rfl ⟩ -- x = ordered_pair a b, a ∈ A ∪ C, b ∈ B ∪ D
+    | inr hx_in_product_C_D => -- hx_in_product_C_D : x ∈ (C ⨯ D)
+      rw [mem_product] at hx_in_product_C_D -- 使用笛卡爾積的成員關係，得到 ∃ c ∈ C, ∃ d ∈ D, x = ordered_pair c d
+      rcases hx_in_product_C_D with ⟨ c, hc, d, hd_D, hx_eq ⟩ -- 分解存在量詞，得到 c ∈ C, d ∈ D, hx_eq : x = ordered_pair c d
+      -- 現在我們有：x = ordered_pair c d, c ∈ C, d ∈ D
+      -- 因為 c ∈ C 所以 c ∈ A ∪ C
+      have hc_in_A_C : c ∈ A ∪ C := ZFSet.mem_union.mpr (Or.inr hc) -- c ∈ C，所以 c ∈ A ∪ C
+      -- 因為 d ∈ D 所以 d ∈ B ∪ D
+      have hd_in_B_D : d ∈ B ∪ D := ZFSet.mem_union.mpr (Or.inr hd_D) -- d ∈ D，所以 d ∈ B ∪ D
+      rw [mem_product] -- 使用笛卡爾積的成員關係，目標變成 ∃ a' ∈ A ∪ C, ∃ b' ∈ B ∪ D, x = ordered_pair a' b'
+      rw [hx_eq] -- 將 x = ordered_pair c d 重寫為 x = ordered_pair a' b'
+      exact ⟨ c, hc_in_A_C, d, hd_in_B_D, rfl ⟩ -- x = ordered_pair c d, c ∈ A ∪ C, d ∈ B ∪ D
+```
+
+**詳細步驟解析：**
+
+#### 第一步：轉換子集合關係
+
+**目標：** 將 `(A × B) ∪ (C × D) ⊆ (A ∪ C) × (B ∪ D)` 轉換為單向蘊含
+
+**策略：** 使用 `ZFSet.subset_def` 將子集合關係轉換為全稱量化的單向蘊含。
+
+**步驟：**
+1. `rw [ZFSet.subset_def]`：將 `A ⊆ B` 轉換為 `∀ x, x ∈ A → x ∈ B`
+2. `intro x hx_union`：引入任意元素 `x` 和假設 `hx_union : x ∈ (A × B) ∪ (C × D)`
+3. 目標變成：證明 `x ∈ (A ∪ C) × (B ∪ D)`
+
+**關鍵理解：**
+- 子集合關係 `A ⊆ B` 只需要證明單向：如果 `x ∈ A`，則 `x ∈ B`
+- 不需要證明反向（如果 `x ∈ B`，則 `x ∈ A`）
+- 這與集合等式 `A = B` 不同，後者需要雙向證明
+
+#### 第二步：分解聯集成員關係
+
+**目標：** 從 `x ∈ (A × B) ∪ (C × D)` 得到 `x ∈ A × B` 或 `x ∈ C × D`
+
+**步驟：**
+1. `rw [ZFSet.mem_union] at hx_union`：將 `x ∈ (A × B) ∪ (C × D)` 轉換為 `x ∈ A × B ∨ x ∈ C × D`
+2. `cases hx_union`：分情況討論
+
+**情況 1：`x ∈ A × B`**
+- `inl hx_in_product_A_B`：`hx_in_product_A_B : x ∈ A × B`
+- `rw [mem_product] at hx_in_product_A_B`：展開為 `∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b`
+- `rcases hx_in_product_A_B with ⟨ a, ha, b, hb_B, hx_eq ⟩`：分解存在量詞，得到 `a ∈ A, b ∈ B, x = ordered_pair a b`
+
+**情況 2：`x ∈ C × D`**
+- `inr hx_in_product_C_D`：`hx_in_product_C_D : x ∈ C × D`
+- 類似地處理
+
+#### 第三步：證明聯集成員關係
+
+**目標：** 證明 `a ∈ A ∪ C` 和 `b ∈ B ∪ D`（情況 1），或 `c ∈ A ∪ C` 和 `d ∈ B ∪ D`（情況 2）
+
+**情況 1：`x ∈ A × B`**
+- `have ha_in_A_C : a ∈ A ∪ C`：因為 `a ∈ A`，所以 `a ∈ A ∪ C`
+  - `ZFSet.mem_union.mpr (Or.inl ha)`：使用 `Or.inl` 選擇左分支
+- `have hb_in_B_D : b ∈ B ∪ D`：因為 `b ∈ B`，所以 `b ∈ B ∪ D`
+  - `ZFSet.mem_union.mpr (Or.inl hb_B)`：使用 `Or.inl` 選擇左分支
+
+**情況 2：`x ∈ C × D`**
+- `have hc_in_A_C : c ∈ A ∪ C`：因為 `c ∈ C`，所以 `c ∈ A ∪ C`
+  - `ZFSet.mem_union.mpr (Or.inr hc)`：使用 `Or.inr` 選擇右分支
+- `have hd_in_B_D : d ∈ B ∪ D`：因為 `d ∈ D`，所以 `d ∈ B ∪ D`
+  - `ZFSet.mem_union.mpr (Or.inr hd_D)`：使用 `Or.inr` 選擇右分支
+
+**關鍵理解：**
+- `Or.inl` 用於選擇左分支：如果 `a ∈ A`，則 `a ∈ A ∪ C`
+- `Or.inr` 用於選擇右分支：如果 `c ∈ C`，則 `c ∈ A ∪ C`
+
+#### 第四步：證明目標
+
+**目標：** 證明 `x ∈ (A ∪ C) × (B ∪ D)`
+
+**步驟：**
+1. `rw [mem_product]`：展開目標為 `∃ a' ∈ A ∪ C, ∃ b' ∈ B ∪ D, x = ordered_pair a' b'`
+2. `rw [hx_eq]`：將 `x` 重寫為 `ordered_pair a b`（情況 1）或 `ordered_pair c d`（情況 2）
+3. `exact ⟨ a, ha_in_A_C, b, hb_in_B_D, rfl ⟩`：構造存在量詞（情況 1）
+4. `exact ⟨ c, hc_in_A_C, d, hd_in_B_D, rfl ⟩`：構造存在量詞（情況 2）
+
+**關鍵理解：**
+- 使用 `rfl` 證明 `ordered_pair a b = ordered_pair a b`（自反性）
+- 構造存在量詞需要提供存在的元素和它們滿足條件的證明
+
+**為什麼這個定理很重要？**
+
+1. **展示子集合關係與等價關係的區別**：
+   - 這個定理展示了如何證明子集合關係（單向）
+   - 與之前的等價關係（雙向）形成對比
+
+2. **聯集與笛卡爾積的交互**：
+   - 展示了聯集運算與笛卡爾積運算之間的關係
+   - 兩個笛卡爾積的聯集是對應集合的聯集的笛卡爾積的子集合
+
+3. **情況分析的應用**：
+   - 展示了如何使用 `cases` 處理析取
+   - 展示了如何使用 `Or.inl` 和 `Or.inr` 構造聯集成員關係
+
+**關鍵技巧總結：**
+
+1. **使用 `ZFSet.subset_def`**：
+   - `rw [ZFSet.subset_def]`：將 `A ⊆ B` 轉換為 `∀ x, x ∈ A → x ∈ B`
+   - 這與 `ZFSet.ext`（用於集合等式）不同
+
+2. **處理子集合關係**：
+   - 子集合關係只需要證明單向蘊含
+   - 不需要使用 `constructor` 分成兩個方向
+
+3. **使用 `Or.inl` 和 `Or.inr`**：
+   - `Or.inl`：選擇左分支（`a ∈ A` 意味著 `a ∈ A ∪ C`）
+   - `Or.inr`：選擇右分支（`c ∈ C` 意味著 `c ∈ A ∪ C`）
+
+4. **情況分析**：
+   - 使用 `cases` 處理析取（`x ∈ A × B ∨ x ∈ C × D`）
+   - 每個情況都需要單獨處理
+
+**記憶要點：**
+- 笛卡爾積與聯集的子集合關係：`(A × B) ∪ (C × D) ⊆ (A ∪ C) × (B ∪ D)`
+- 關鍵觀察：這是單向的子集合關係，不是等價關係
+- 使用 `ZFSet.subset_def` 將子集合關係轉換為單向蘊含
+- 子集合關係只需要證明：如果 `x ∈ A`，則 `x ∈ B`
+- 使用 `Or.inl` 選擇左分支，`Or.inr` 選擇右分支
+- 使用 `cases` 處理析取，每個情況都需要單獨處理
+- 注意：這個關係是單向的，反向不一定成立
+
+---
+
+### 範例 21：笛卡爾積與交集的關係（重複）
+
+**定理：** `(A × B) ∩ (C × D) = (A ∩ C) × (B ∩ D)`，即 `product A B ∩ product C D = product (A ∩ C) (B ∩ D)`
+
+**注意：** 這個定理與範例 19 相同，這裡提供完整的證明代碼供參考。
+
+**完整證明：**
+
+```lean
+theorem theorem_2_2_3_f (A B C D : ZFSet) : product A B ∩ product C D = product (A ∩ C) (B ∩ D) := by
+  apply ZFSet.ext -- 根據外延性公設，將 (A ⨯ B) ∩ (C ⨯ D) = (A ∩ C) ⨯ (B ∩ D) 轉換為 ∀ x, x ∈ (A ⨯ B) ∩ (C ⨯ D) ↔ x ∈ (A ∩ C) ⨯ (B ∩ D)
+  intro x -- x :any arbitrary element
+  constructor -- 將 ↔ 分成兩個方向
+  · intro hx_inter -- hx_inter : x ∈ (A ⨯ B) ∩ (C ⨯ D)
+    -- x ∈ (A ⨯ B) ∩ (C ⨯ D) → x ∈ (A ∩ C) ⨯ (B ∩ D)
+    rw [ZFSet.mem_inter] at hx_inter -- 將 x ∈ (A ⨯ B) ∩ (C ⨯ D) 拆成 x ∈ (A ⨯ B) ∧ x ∈ (C ⨯ D)
+    rcases hx_inter with ⟨ hx_in_product_A_B, hx_in_product_C_D ⟩ -- 分解交集成員關係，得到 x ∈ (A ⨯ B) ∧ x ∈ (C ⨯ D)
+    rw [mem_product] at hx_in_product_A_B -- 使用笛卡爾積的成員關係，得到 ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b
+    rcases hx_in_product_A_B with ⟨ a, ha, b, hb_B, hx_eq ⟩ -- 分解存在量詞，得到 a ∈ A, b ∈ B, hx_eq : x = ordered_pair a b
+    rw [mem_product] at hx_in_product_C_D -- 使用笛卡爾積的成員關係，得到 ∃ c ∈ C, ∃ d ∈ D, x = ordered_pair c d
+    rcases hx_in_product_C_D with ⟨ c, hc, d, hd_D, hx_eq2 ⟩ -- 分解存在量詞，得到 c ∈ C, d ∈ D, hx_eq2 : x = ordered_pair c d
+    -- 現在我們有：x = ordered_pair a b, a ∈ A, b ∈ B, x = ordered_pair c d, c ∈ C, d ∈ D
+    -- 因為 x = ordered_pair a b ∧ x = ordered_pair c d，所以 ordered_pair a b = ordered_pair c d
+    have h_eq_pair : ordered_pair a b = ordered_pair c d := by
+      rw [← hx_eq] -- 將 ordered_pair a b 重寫為 x
+      exact hx_eq2 -- x = ordered_pair c d
+    -- 使用有序對單射性質，得到 a = c ∧ b = d
+    have h_eq_components : a = c ∧ b = d := ordered_pair_inj a b c d h_eq_pair
+    rcases h_eq_components with ⟨ ha_eq_c, hb_eq_d ⟩ -- 分解等式，得到 a = c ∧ b = d
+    have ha_in_C : a ∈ C := by
+      rw [ha_eq_c] -- 將 a 重寫為 c
+      exact hc -- a = c，所以 a ∈ C
+    have hb_in_D : b ∈ D := by
+      rw [hb_eq_d] -- 將 b 重寫為 d
+      exact hd_D -- d ∈ D
+    have ha_in_inter_A_C : a ∈ A ∩ C := ZFSet.mem_inter.mpr ⟨ ha, ha_in_C ⟩ -- a ∈ A ∧ a ∈ C
+    have hb_in_inter_B_D : b ∈ B ∩ D := ZFSet.mem_inter.mpr ⟨ hb_B, hb_in_D ⟩ -- b ∈ B ∧ b ∈ D
+    rw [mem_product] -- 展開目標為 ∃ a' ∈ A ∩ C, ∃ b' ∈ B ∩ D, x = ordered_pair a' b'
+    rw [hx_eq] -- 將 x = ordered_pair a b 重寫為 x = ordered_pair a' b'
+    exact ⟨ a, ha_in_inter_A_C, b, hb_in_inter_B_D, rfl ⟩ -- x = ordered_pair a b, a ∈ A ∩ C, b ∈ B ∩ D
+  · intro hx_product -- hx_product : x ∈ (A ∩ C) ⨯ (B ∩ D)
+    rw [mem_product] at hx_product -- 使用笛卡爾積的成員關係，得到 ∃ a ∈ A ∩ C, ∃ b ∈ B ∩ D, x = ordered_pair a b
+    rcases hx_product with ⟨ a, ha_in_inter_A_C, b, hb_in_inter_B_D, hx_eq ⟩ -- 分解存在量詞，得到 a ∈ A ∩ C, b ∈ B ∩ D, hx_eq : x = ordered_pair a b
+    rw [ZFSet.mem_inter] at ha_in_inter_A_C -- 將 a ∈ A ∩ C 拆成 a ∈ A ∧ a ∈ C
+    rcases ha_in_inter_A_C with ⟨ ha_in_A, ha_in_C ⟩ -- 分解交集成員關係，得到 a ∈ A ∧ a ∈ C
+    rw [ZFSet.mem_inter] at hb_in_inter_B_D -- 將 b ∈ B ∩ D 拆成 b ∈ B ∧ b ∈ D
+    rcases hb_in_inter_B_D with ⟨ hb_in_B, hb_in_D ⟩ -- 分解交集成員關係，得到 b ∈ B ∧ b ∈ D
+    have hx_in_product_A_B : x ∈ product A B := by
+      rw [mem_product, hx_eq] -- 使用笛卡爾積的成員關係，並將 x 重寫為 ordered_pair a b
+      exact ⟨ a, ha_in_A, b, hb_in_B, rfl ⟩ -- ordered_pair a b = ordered_pair a b, a ∈ A, b ∈ B
+    have hx_in_product_C_D : x ∈ product C D := by
+      rw [mem_product, hx_eq] -- 使用笛卡爾積的成員關係，並將 x 重寫為 ordered_pair a b
+      exact ⟨ a, ha_in_C, b, hb_in_D, rfl ⟩ -- ordered_pair a b = ordered_pair a b, a ∈ C, b ∈ D
+    exact ZFSet.mem_inter.mpr ⟨ hx_in_product_A_B, hx_in_product_C_D ⟩ -- x ∈ (A ⨯ B) ∩ (C ⨯ D)
+```
+
+**詳細說明：**
+
+這個證明的結構與範例 19 完全相同，主要步驟包括：
+
+1. **第一個方向**：使用有序對的單射性質，從 `x` 同時屬於兩個笛卡爾積推導出 `x` 屬於對應交集的笛卡爾積
+2. **第二個方向**：分解交集的成員關係，分別證明 `x` 屬於兩個笛卡爾積
+
+詳細的步驟解析和關鍵理解請參見範例 19。
+
+---
+
+## 集合族的聯集與交集
+
+### 集合族的聯集（Union of a Family）
+
+**定義：**
+
+集合族 `𝒜` 的聯集（或稱為在 `𝒜` 上的聯集）定義為包含所有屬於 `𝒜` 中某個集合的元素的集合。
+
+```lean
+def union_of_family (𝒜 : ZFSet) : ZFSet := ZFSet.sUnion 𝒜
+```
+
+**數學符號：** `⋃_{A ∈ 𝒜} A = {x : ∃ A ∈ 𝒜, x ∈ A}`
+
+**成員關係定理：**
+
+```lean
+theorem mem_union_of_family (𝒜 x : ZFSet) :
+  x ∈ union_of_family 𝒜 ↔ ∃ A ∈ 𝒜, x ∈ A
+```
+
+這個定理說明：`x` 屬於集合族 `𝒜` 的聯集，當且僅當存在一個集合 `A` 屬於 `𝒜`，使得 `x` 屬於 `A`。
+
+---
+
+### 集合族的交集（Intersection of a Family）
+
+**定義：**
+
+集合族 `𝒜` 的交集（或稱為在 `𝒜` 上的交集）定義為包含所有同時屬於 `𝒜` 中每個集合的元素的集合。
+
+**注意：** 集合族的交集通常需要集合族非空。如果 `𝒜` 是空集合族，則其交集在 ZFC 中未定義（或者需要全域集合，這在 ZFC 中不存在）。
+我們的定義使用分離公理，實際上定義的是 `⋂_{A ∈ 𝒜} A = {x ∈ ⋃_{A ∈ 𝒜} A : ∀ A ∈ 𝒜, x ∈ A}`。
+
+```lean
+def intersection_of_family (𝒜 : ZFSet) : ZFSet := 
+  ZFSet.sep (fun x => ∀ A ∈ 𝒜, x ∈ A) (union_of_family 𝒜)
+```
+
+**數學符號：** `⋂_{A ∈ 𝒜} A = {x : ∀ A ∈ 𝒜, x ∈ A}`
+
+**成員關係定理：**
+
+```lean
+theorem mem_intersection_of_family (𝒜 x : ZFSet) :
+  x ∈ intersection_of_family 𝒜 ↔ (∃ B ∈ 𝒜, x ∈ B) ∧ (∀ A ∈ 𝒜, x ∈ A)
+```
+
+這個定理說明：`x` 屬於集合族 `𝒜` 的交集，當且僅當：
+1. `x` 屬於 `𝒜` 的聯集（即存在某個 `B ∈ 𝒜` 使得 `x ∈ B`，這隱含了 `𝒜` 非空且 `x` 至少在一個集合中）
+2. 對於所有 `A ∈ 𝒜`，`x` 都屬於 `A`
+
+**證明技巧：**
+
+證明這個定理時，我們使用了 `simp` 策略，因為展開定義後，左右兩邊的邏輯表達式是等價的（alpha-equivalent）。
+
+```lean
+theorem mem_intersection_of_family (𝒜 x : ZFSet) :
+  x ∈ intersection_of_family 𝒜 ↔ (∃ B ∈ 𝒜, x ∈ B) ∧ (∀ A ∈ 𝒜, x ∈ A) := by
+  -- 直接使用 simp 展開所有定義並簡化
+  simp [intersection_of_family, ZFSet.mem_sep, mem_union_of_family]
+```
+
+### 範例 21：集合族交集的子集合性質
+
+**題目：** 對於集合族 `𝒜` 中的任意集合 `B`，`𝒜` 的交集是 `B` 的子集合。即 `∀ B ∈ 𝒜, ⋂_{A ∈ 𝒜} A ⊆ B`。
+
+**證明思路：**
+1. 這是「交集包含於每一個集合」的推廣。
+2. 如果 `x` 在交集中，則 `x` 必須在 `𝒜` 的**每一個**集合中。
+3. 因為 `B` 是 `𝒜` 的成員，所以 `x` 必須在 `B` 中。
+
+**代碼實現：**
+
+```lean
+-- Theorem 2.3.1 : Let 𝒜 be a family of sets.
+-- (a) For every set B in the family 𝒜, ⋂_{A ∈ 𝒜} A ⊆ B.
+theorem theorem_2_3_1 (𝒜 : ZFSet) : ∀ B ∈ 𝒜, intersection_of_family 𝒜 ⊆ B := by
+  intro B hB x hx -- B : 任意集合, hB : B ∈ 𝒜, x : 任意元素, hx : x ∈ ⋂ 𝒜
+  -- 目標：證明 x ∈ B
+  rw [mem_intersection_of_family] at hx -- 展開交集定義：x ∈ ⋂ 𝒜 ↔ (∃ B ∈ 𝒜, x ∈ B) ∧ (∀ A ∈ 𝒜, x ∈ A)
+  have h_forall : ∀ A ∈ 𝒜, x ∈ A := hx.right -- 取出右邊的性質：對於所有 A ∈ 𝒜，x ∈ A
+  exact h_forall B hB -- 因為 B ∈ 𝒜，所以 x ∈ B
+```
+
+**關鍵技巧：**
+- **`rw [mem_intersection_of_family] at hx`**：將抽象的交集定義轉換為具體的邏輯條件。
+- **`hx.right`**：從合取中提取全稱量詞部分。
+- **`h_forall B hB`**：將全稱量詞應用於特定的集合 `B`（因為我們已知 `B ∈ 𝒜`）。
+
+### 範例 22：集合族聯集的超集合性質
+
+**題目：** 對於集合族 `𝒜` 中的任意集合 `B`，`B` 是 `𝒜` 的聯集的子集合。即 `∀ B ∈ 𝒜, B ⊆ ⋃_{A ∈ 𝒜} A`。
+
+**證明思路：**
+1. 這是「聯集包含每一個集合」的推廣。
+2. 假設 `x ∈ B`。
+3. 要證明 `x ∈ ⋃𝒜`，只要證明存在一個 `A ∈ 𝒜` 使得 `x ∈ A`。
+4. 因為 `B` 本身就在 `𝒜` 中，且 `x ∈ B`，所以 `B` 就是我們要找的那個集合。
+
+**代碼實現：**
+
+```lean
+-- (b) For every set B in the family 𝒜, B ⊆ ⋃_{A ∈ 𝒜} A
+theorem theorem_2_3_1_b (𝒜 : ZFSet) : ∀ B ∈ 𝒜, B ⊆ union_of_family 𝒜 := by
+  intro B hB x hx -- B : 任意集合, hB : B ∈ 𝒜, x : 任意元素, hx : x ∈ B
+  -- 目標：證明 x ∈ ⋃ 𝒜
+  rw [mem_union_of_family] -- 展開目標中的聯集定義：目標變成 ∃ A ∈ 𝒜, x ∈ A
+  -- 我們需要提供一個 A，證明 A ∈ 𝒜 且 x ∈ A
+  -- 因為已知 B ∈ 𝒜 且 x ∈ B，所以 B 就是我們要找的集合
+  exact ⟨ B, hB, hx ⟩ -- 構造存在量詞證明：使用 B 作為存在的集合
+```
+
+**關鍵技巧：**
+- **構造存在量詞**：當目標是 `∃ A ∈ 𝒜, ...` 時，如果我們手上有一個具體的對象（這裡是 `B`）滿足條件，我們可以用 `exact ⟨B, ...⟩` 來完成證明。
+
+### 範例 23：非空集合族的交集包含於聯集
+
+**題目：** 如果集合族 `𝒜` 非空，則 `𝒜` 的交集包含於 `𝒜` 的聯集。即 `𝒜 ≠ ∅ → ⋂_{A ∈ 𝒜} A ⊆ ⋃_{A ∈ 𝒜} A`。
+
+**證明思路：**
+1. 假設 `x` 在交集中。
+2. 根據交集的定義，`x` 必須在 `𝒜` 的**每一個**集合中，且至少存在一個 `B ∈ 𝒜` 使得 `x ∈ B`（這來自交集定義中 `x ∈ ⋃𝒜` 的部分）。
+3. 既然 `x` 屬於某個 `B ∈ 𝒜`，根據聯集的定義，`x` 自然在聯集中。
+
+**代碼實現：**
+
+```lean
+-- (c) If the family 𝒜 is nonempty, then ⋂_{A ∈ 𝒜} A ⊆ ⋃_{A ∈ 𝒜} A
+theorem theorem_2_3_1_c (𝒜 : ZFSet) : 𝒜 ≠ ∅ → intersection_of_family 𝒜 ⊆ union_of_family 𝒜 := by
+  intro h_nonempty x hx -- 𝒜 : 集合族, h_nonempty : 𝒜 ≠ ∅, x : 任意元素, hx : x ∈ ⋂ 𝒜
+  -- 目標：證明 x ∈ ⋃ 𝒜
+  rw [mem_intersection_of_family] at hx -- 展開交集定義：x ∈ ⋂ 𝒜 ↔ (∃ B ∈ 𝒜, x ∈ B) ∧ (∀ A ∈ 𝒜, x ∈ A)
+  have h_exists : ∃ B ∈ 𝒜, x ∈ B := hx.left -- 存在一個 B ∈ 𝒜 使得 x ∈ B
+  rcases h_exists with ⟨ B, hB, hx_B ⟩ -- B : 任意集合, hB : B ∈ 𝒜, hx_B : x ∈ B
+  rw [mem_union_of_family] -- 展開目標中的聯集定義：目標變成 ∃ A ∈ 𝒜, x ∈ A
+  exact ⟨ B, hB, hx_B ⟩ -- 構造存在量詞證明：使用 B 作為存在的集合
+```
+
+### 範例 24：集合族的德摩根定律（聯集形式）
+
+**題目：** 聯集的補集等於補集的交集。對於集合族，這表現為：`(⋃ 𝒜)ᶜ ↔ ∀ A ∈ 𝒜, Aᶜ`。
+更精確地說：`x ∈ (⋃ 𝒜)ᶜ ↔ x ∈ U ∧ ∀ A ∈ 𝒜, x ∉ A`。
+
+**證明思路：**
+- **方向 1 (→)**：如果 `x` 不在聯集中，則 `x` 不屬於任何一個 `A ∈ 𝒜`。否則，如果 `x ∈ A`，則 `x ∈ ⋃ 𝒜`，矛盾。
+- **方向 2 (←)**：如果 `x` 不屬於任何 `A ∈ 𝒜`，則 `x` 不在聯集中。否則，如果 `x ∈ ⋃ 𝒜`，則存在 `A` 使得 `x ∈ A`，與假設矛盾。
+
+**代碼實現：**
+
+```lean
+-- (e) De Morgan's Law for families: (⋃ 𝒜)ᶜ ↔ ∀ A ∈ 𝒜, Aᶜ
+theorem theorem_2_3_1_d (U 𝒜 : ZFSet) :
+  ∀ x, x ∈ compl U (union_of_family 𝒜) ↔ (x ∈ U ∧ ∀ A ∈ 𝒜, x ∉ A) := by
+  intro x -- x : 任意元素
+  constructor -- 將 ↔ 分成兩個方向
+  · intro hx -- hx : x ∈ (⋃ 𝒜)ᶜ
+    rw [mem_compl] at hx -- 展開補集定義：x ∈ U ∧ x ∉ ⋃ 𝒜
+    rcases hx with ⟨hx_U, hx_not_union⟩ -- hx_U : x ∈ U, hx_not_union : x ∉ ⋃ 𝒜
+    constructor
+    · exact hx_U -- x ∈ U
+    · intro A hA hx_A -- A : 任意集合, hA : A ∈ 𝒜, hx_A : x ∈ A。目標：推出矛盾
+      -- 證明 x ∈ ⋃ 𝒜
+      have hx_in_union : x ∈ union_of_family 𝒜 := by
+        rw [mem_union_of_family] -- 展開聯集定義：∃ B ∈ 𝒜, x ∈ B
+        exact ⟨ A, hA, hx_A ⟩ -- 因為 A ∈ 𝒜 且 x ∈ A
+      exact hx_not_union hx_in_union -- 矛盾：x ∉ ⋃ 𝒜 但 x ∈ ⋃ 𝒜
+  · intro ⟨hx_U, h_forall⟩ -- hx_U : x ∈ U, h_forall : ∀ A ∈ 𝒜, x ∉ A
+    rw [mem_compl] -- 展開目標補集定義：x ∈ U ∧ x ∉ ⋃ 𝒜
+    constructor
+    · exact hx_U -- x ∈ U
+    · intro hx_in_union -- 假設 x ∈ ⋃ 𝒜，推出矛盾
+      rw [mem_union_of_family] at hx_in_union -- 展開聯集定義：∃ A ∈ 𝒜, x ∈ A
+      rcases hx_in_union with ⟨ A, hA, hx_A ⟩ -- 取出存在的集合 A
+      -- h_forall A hA 說 x ∉ A，但 hx_A 說 x ∈ A，矛盾
+      exact h_forall A hA hx_A
+```
+
+### 範例 25：集合族的德摩根定律（交集形式）
+
+**題目：** 交集的補集等於補集的聯集（需要 `𝒜 ≠ ∅`）。即：`(⋂ 𝒜)ᶜ ↔ ∃ A ∈ 𝒜, Aᶜ`。
+
+**證明思路：**
+- **方向 1 (→)**：使用反證法。假設對於所有 `A ∈ 𝒜`，`x ∈ A`。則 `x ∈ ⋂ 𝒜`，這與 `x ∈ (⋂ 𝒜)ᶜ` 矛盾。
+- **方向 2 (←)**：如果存在 `A ∈ 𝒜` 使得 `x ∉ A`，則 `x` 不可能在交集中（因為交集要求元素在所有集合中）。
+
+**代碼實現：**
+
+```lean
+-- (f) De Morgan's Law for families (Intersection): (⋂ 𝒜)ᶜ ↔ ∃ A ∈ 𝒜, Aᶜ
+-- Note: Requires 𝒜 ≠ ∅ to ensure the existence of sets.
+theorem theorem_2_3_1_e (U 𝒜 : ZFSet) (h_nonempty : 𝒜 ≠ ∅) :
+  ∀ x, x ∈ compl U (intersection_of_family 𝒜) ↔ (x ∈ U ∧ ∃ A ∈ 𝒜, x ∉ A) := by
+  intro x
+  constructor
+  · intro hx -- hx : x ∈ (⋂ 𝒜)ᶜ
+    rw [mem_compl] at hx
+    rcases hx with ⟨hx_U, hx_not_inter⟩ -- x ∈ U, x ∉ ⋂ 𝒜
+    constructor
+    · exact hx_U
+    · -- 我們需要證明 ∃ A ∈ 𝒜, x ∉ A
+      -- 使用反證法：假設 ∀ A ∈ 𝒜, x ∈ A
+      by_contra h_all_in
+      rw [not_exists] at h_all_in -- h_all_in : ∀ x, ¬(x ∈ 𝒜 ∧ x ∉ A)
+      -- 這意味著對於所有 A ∈ 𝒜，x ∈ A
+      have h_forall : ∀ A ∈ 𝒜, x ∈ A := by
+        intro A hA
+        by_contra h_not_in
+        exact h_all_in A ⟨hA, h_not_in⟩
+      -- 因為 𝒜 ≠ ∅，我們可以找到一個 B ∈ 𝒜
+      have h_exists_B : ∃ B, B ∈ 𝒜 := by
+        by_contra h_empty
+        rw [not_exists] at h_empty
+        -- 如果不存在 B ∈ 𝒜，則 𝒜 是空集合
+        have h_A_empty : 𝒜 = ∅ := by
+          apply ZFSet.ext
+          intro z
+          constructor
+          · intro hz
+            exact False.elim (h_empty z hz)
+          · intro hz
+            exact False.elim (ZFSet.notMem_empty z hz)
+        exact h_nonempty h_A_empty
+      rcases h_exists_B with ⟨B, hB⟩
+      -- 因為 x ∈ B (由 h_forall)，所以 x ∈ ⋃ 𝒜
+      have hx_in_union : x ∈ union_of_family 𝒜 := by
+        rw [mem_union_of_family]
+        exact ⟨B, hB, h_forall B hB⟩
+      -- 所以 x ∈ ⋂ 𝒜
+      have hx_in_inter : x ∈ intersection_of_family 𝒜 := by
+        rw [mem_intersection_of_family]
+        exact ⟨⟨B, hB, h_forall B hB⟩, h_forall⟩
+      -- 這與 x ∉ ⋂ 𝒜 (hx_not_inter) 矛盾
+      exact hx_not_inter hx_in_inter
+  · intro ⟨hx_U, h_exists⟩ -- x ∈ U, ∃ A ∈ 𝒜, x ∉ A
+    rw [mem_compl]
+    constructor
+    · exact hx_U
+    · intro hx_in_inter -- 假設 x ∈ ⋂ 𝒜
+      rw [mem_intersection_of_family] at hx_in_inter
+      have h_forall := hx_in_inter.right -- ∀ A ∈ 𝒜, x ∈ A
+      rcases h_exists with ⟨A, hA, hx_not_in_A⟩
+      -- h_forall A hA 說 x ∈ A，但 hx_not_in_A 說 x ∉ A，矛盾
+      exact hx_not_in_A (h_forall A hA)
+```
 
 ---
 
