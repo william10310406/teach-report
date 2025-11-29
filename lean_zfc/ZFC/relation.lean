@@ -64,22 +64,29 @@ def is_relation (R A B : ZFSet) : ZFSet :=
             (ZFSet.powerset (ZFSet.powerset (A ∪ B)))
 
 theorem mem_is_relation (R A B x : ZFSet) : x ∈ is_relation R A B ↔ x ∈ product A B ∧ x ∈ R := by
-  rw [is_relation] -- 展開 is_relation 的定義：is_relation R A B = R ⊆ product A B
-
---Definition: The identity relation on A is the set {(a, a) | a ∈ A}.
-def identity_relation (A : ZFSet) : ZFSet :=
-  ZFSet.sep (fun x => ∃ a ∈ A, x = ordered_pair a a)
-            (ZFSet.powerset (ZFSet.powerset (A ∪ A)))
-
---Definition: The domain of a relation R from A to B is the set of all first components of the ordered pairs in R.
-def domain (R A B : ZFSet) : ZFSet :=
-  ZFSet.sep (fun a => ∃ b ∈ B, ordered_pair a b ∈ R)
-            (ZFSet.powerset A)
---Definition: The range of a relation R from A to B is the set of all second components of the ordered pairs in R.
-def range (R A B : ZFSet) : ZFSet :=
-  ZFSet.sep (fun b => ∃ a ∈ A, ordered_pair a b ∈ R)
-            (ZFSet.powerset B)
-
-def inverse (R A B : ZFSet) : ZFSet :=
-  ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair b a)
-            (ZFSet.powerset (ZFSet.powerset (A ∪ B)))
+  rw [is_relation] -- 展開 is_relation 的定義：is_relation R A B = ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair a b) (ZFSet.powerset (ZFSet.powerset (A ∪ B)))
+  rw [ZFSet.mem_sep] -- 使用分離公設的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
+  constructor -- 將 ↔ 分成兩個方向
+  · intro ⟨hx_in_powerset, h_exists⟩
+    rcases h_exists with ⟨a, ha, b, hb, hR, h_eq⟩ --將存在量詞分解成 a ∈ A, b ∈ B, ordered_pair a b ∈ R, x = ordered_pair a b
+    constructor
+    · have hx_prod : x ∈ product A B := by
+        have := (mem_product A B x).2
+        exact this ⟨a, ha, b, hb, h_eq⟩
+      exact hx_prod
+    · have hx_in_R : x ∈ R := by
+        rw [h_eq] --將 x = ordered_pair a b 重寫為 x = ordered_pair a b
+        exact hR
+      exact hx_in_R
+  · intro ⟨hx_in_product_A_B, hx_in_R⟩
+    constructor
+    · rw [product] at hx_in_product_A_B
+      rw [ZFSet.mem_sep] at hx_in_product_A_B
+      exact hx_in_product_A_B.1
+    · rw [product] at hx_in_product_A_B
+      rw [ZFSet.mem_sep] at hx_in_product_A_B
+      rcases hx_in_product_A_B with ⟨x_in_powerset, a, ha, b, hb, h_eq⟩
+      have hR : ordered_pair a b ∈ R := by
+        rw [h_eq] at hx_in_R
+        exact hx_in_R
+      exact ⟨a, ha, b, hb, hR, h_eq⟩
