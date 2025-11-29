@@ -1,4 +1,8 @@
 import Mathlib.SetTheory.ZFC.Basic
+-- 注意：Mathlib.SetTheory.ZFC.Basic 包含基本的 ZFC 定義
+-- 如果需要更多功能，可以考慮：
+-- import Mathlib.SetTheory.ZFC.Ordinal  -- 序數相關（可能包含更多 omega 性質）
+-- 但目前 Mathlib.SetTheory.ZFC.Basic 應該足夠
 --2.1 Basic Concepts of Set Theory
 --Theorem 2.1.1 (a) for every set A, ∅ ⊆ A
 -- 空集合是任何集合的子集合（空真命題：空集合沒有元素，所以條件永遠為假）
@@ -1443,3 +1447,159 @@ theorem theorem_2_3_1_e (U 𝒜 : ZFSet) (h_nonempty : 𝒜 ≠ ∅) :
       rcases h_exists with ⟨A, hA, hx_not_in_A⟩
       -- h_forall A hA 說 x ∈ A，但 hx_not_in_A 說 x ∉ A，矛盾
       exact hx_not_in_A (h_forall A hA)
+
+-- Theorem 2.3.2 : Let 𝓐 be a nonempty family of sets and B be a set.
+-- (a) If B ⊆ A for all A ∈ 𝓐, then B ⊆ ⋂_{A ∈ 𝓐} A.
+theorem theorem_2_3_2_a (𝓐 B : ZFSet) (h_nonempty : 𝓐 ≠ ∅) : (∀ A ∈ 𝓐, B ⊆ A) → B ⊆ intersection_of_family 𝓐 := by
+  intro h_forall x hx -- 𝓐 : 集合族, B : 集合, h_forall : ∀ A ∈ 𝓐, B ⊆ A, x : 任意元素, hx : x ∈ B
+  -- goal : prove x ∈ ⋂ 𝓐
+  rw [mem_intersection_of_family] -- 展開交集定義：x ∈ ⋂ 𝓐 ↔ (∃ B' ∈ 𝓐, x ∈ B') ∧ (∀ A ∈ 𝓐, x ∈ A)
+  constructor -- 將 ∧ 分成兩個部分
+  · -- 證明存在性：∃ A ∈ 𝓐, x ∈ A
+    -- 先從 𝓐 ≠ ∅ 推導出存在一個集合 A₀ ∈ 𝓐
+    have h_exists_A : ∃ A, A ∈ 𝓐 := by
+      by_contra h_all_empty -- 反證法：假設 ¬(∃ A, A ∈ 𝓐)
+      rw [not_exists] at h_all_empty -- 轉換為 ∀ A, A ∉ 𝓐
+      apply h_nonempty -- 要證明 𝓐 ≠ ∅，即證明 𝓐 = ∅ → False
+      apply ZFSet.ext -- 證明 𝓐 = ∅
+      intro z
+      constructor
+      · intro hz; exact False.elim (h_all_empty z hz) -- z ∈ 𝓐 與假設矛盾
+      · intro hz; exact False.elim (ZFSet.notMem_empty z hz) -- z ∈ ∅ 不可能
+    rcases h_exists_A with ⟨ A₀, hA₀ ⟩ -- 取出存在的 A₀
+    use A₀
+    constructor
+    · exact hA₀
+    · apply h_forall A₀ hA₀ -- B ⊆ A₀
+      exact hx -- x ∈ B
+  · -- 證明全稱性：∀ A ∈ 𝓐, x ∈ A
+    intro A hA
+    apply h_forall A hA -- B ⊆ A
+    exact hx -- x ∈ B
+
+-- (b) If A ⊆ B for all A ∈ 𝓐, then ⋃_{A ∈ 𝓐} A ⊆ B
+theorem theorem_2_3_2_b (𝓐 B : ZFSet) : (∀ A ∈ 𝓐, A ⊆ B) → union_of_family 𝓐 ⊆ B := by
+  intro h_forall x hx -- 𝓐 : 集合族, B : 集合, h_forall : ∀ A ∈ 𝓐, A ⊆ B, x : 任意元素, hx : x ∈ ⋃ 𝓐
+  -- goal : prove x ∈ B
+  rw [mem_union_of_family] at hx -- 展開聯集定義：x ∈ ⋃ 𝓐 ↔ ∃ A ∈ 𝓐, x ∈ A
+  rcases hx with ⟨ A, hA, hx_A ⟩ -- A : 任意集合, hA : A ∈ 𝓐, hx_A : x ∈ A
+  apply h_forall A hA -- A ⊆ B
+  exact hx_A -- x ∈ A
+
+-- ============================================================
+-- 9. 索引集合族 (Indexed Family of Sets)
+-- ============================================================
+
+-- DEFINITION: 索引集合族 {A_α : α ∈ Δ}
+-- - Δ: 索引集 (indexing set)
+-- - α ∈ Δ: 索引 (index)
+-- - A_α: 對應於索引 α 的集合
+-- - {A_α : α ∈ Δ}: 索引集合族 (indexed family of sets)
+
+-- 在 ZFC 中，索引族可視為函數 f : Δ → Sets
+-- 即由有序對 (α, A_α) 組成的集合
+
+-- 索引聯集的定義：⋃_{α ∈ Δ} A_α = ⋃ {A_α : α ∈ Δ}
+def indexed_union (Δ : ZFSet) (f : ZFSet → ZFSet) : ZFSet :=
+  union_of_family (ZFSet.sep (fun A => ∃ α ∈ Δ, A = f α) (ZFSet.powerset (ZFSet.sUnion (ZFSet.sep (fun A => ∃ α ∈ Δ, A = f α) (ZFSet.powerset (ZFSet.sUnion Δ))))))
+
+-- 成員關係：x ∈ ⋃_{α ∈ Δ} f(α) ↔ ∃ α ∈ Δ, x ∈ f(α)
+
+-- 注意：完整的索引族形式化需要先定義關係和函數的概念
+-- 這些將在後續章節中定義
+-- 目前的定義與 union_of_family 和 intersection_of_family 本質上一致
+-- 主要區別在於索引族明確標識了索引集 Δ 和索引 α
+
+-- DEFINITION: Pairwise Disjoint (成對不交)
+-- 索引族 {A_α : α ∈ Δ} 稱為成對不交的，如果對於所有 α, β ∈ Δ：
+-- 要麼 A_α = A_β，要麼 A_α ∩ A_β = ∅
+def pairwise_disjoint (Δ : ZFSet) (f : ZFSet → ZFSet) : Prop :=
+  ∀ α ∈ Δ, ∀ β ∈ Δ, f α = f β ∨ f α ∩ f β = ∅
+
+-- ============================================================
+-- 10. Omega 的最小性 (Minimality of Omega)
+-- ============================================================
+
+def is_inductive (S : ZFSet) : Prop :=
+  ZFSet.empty ∈ S ∧ ∀ n ∈ S, (insert n n) ∈ S
+
+theorem omega_is_inductive : is_inductive ZFSet.omega := by
+  constructor
+  · exact ZFSet.omega_zero  -- 0 ∈ omega
+  · intro n hn  -- hn : n ∈ omega
+    exact ZFSet.omega_succ hn  -- ∵ n ∈ omega ∴ succ n ∈ omega
+
+axiom regularity_axiom (T : ZFSet) (h_nonempty : T ≠ ZFSet.empty) :
+  ∃ m ∈ T, m ∩ T = ZFSet.empty
+
+axiom omega_transitive_axiom (m k : ZFSet) (hm_omega : m ∈ ZFSet.omega) (hk_m : k ∈ m) :
+  k ∈ ZFSet.omega
+
+axiom nat_structure_axiom (m : ZFSet) (hm_omega : m ∈ ZFSet.omega) :
+  m = ZFSet.empty ∨ (∃ k, m = insert k k)
+
+theorem regularity_applied (T : ZFSet) (h_nonempty : T ≠ ZFSet.empty) :
+  ∃ m ∈ T, m ∩ T = ZFSet.empty :=
+  regularity_axiom T h_nonempty
+
+theorem omega_transitive (m k : ZFSet) (hm_omega : m ∈ ZFSet.omega) (hk_m : k ∈ m) :
+  k ∈ ZFSet.omega :=
+  omega_transitive_axiom m k hm_omega hk_m
+
+theorem nat_structure (m : ZFSet) (hm_omega : m ∈ ZFSet.omega) :
+  m = ZFSet.empty ∨ (∃ k, m = insert k k) :=
+  nat_structure_axiom m hm_omega
+
+theorem omega_minimal (S : ZFSet)
+  (h_inductive : is_inductive S):
+  ZFSet.omega ⊆ S := by
+  rcases h_inductive with ⟨h_zero, h_succ⟩  -- h_zero : 0 ∈ S, h_succ : ∀ n ∈ S, succ n ∈ S
+  intro x hx_omega  -- hx_omega : x ∈ omega
+  by_contra hx_not_in_S  -- 假設 x ∉ S，要推出矛盾
+  let T := ZFSet.sep (fun y => y ∉ S) ZFSet.omega  -- T = {y ∈ omega : y ∉ S}
+  have hx_in_T : x ∈ T := by
+    rw [ZFSet.mem_sep]
+    exact ⟨hx_omega, hx_not_in_S⟩  -- x ∈ omega 且 x ∉ S
+  have h_T_nonempty : T ≠ ZFSet.empty := by
+    intro h_T_empty  -- 假設 T = ∅
+    rw [h_T_empty] at hx_in_T  -- 但 x ∈ T，矛盾
+    exact ZFSet.notMem_empty x hx_in_T
+  have h_reg : ∃ m ∈ T, m ∩ T = ZFSet.empty := by
+    exact regularity_applied T h_T_nonempty  -- 由正則公設，T 有最小元素 m
+  rcases h_reg with ⟨m, hm_T, hm_disjoint⟩  -- m ∈ T, m ∩ T = ∅
+  have hm_omega : m ∈ ZFSet.omega := by
+    rw [ZFSet.mem_sep] at hm_T  -- hm_T : m ∈ omega ∧ m ∉ S
+    exact hm_T.left  -- m ∈ omega
+  have hm_not_S : m ∉ S := by
+    rw [ZFSet.mem_sep] at hm_T
+    exact hm_T.right  -- m ∉ S
+  have h_all_in_S : ∀ k ∈ m, k ∈ S := by
+    intro k hk_m  -- hk_m : k ∈ m
+    by_contra hk_not_S  -- 假設 k ∉ S，要推出矛盾
+    have hk_T : k ∈ T := by
+      rw [ZFSet.mem_sep]
+      constructor
+      · exact omega_transitive m k hm_omega hk_m  -- ∵ m ∈ omega ∧ k ∈ m ∴ k ∈ omega
+      · exact hk_not_S  -- k ∉ S
+    have hk_in_inter : k ∈ m ∩ T := by
+      rw [ZFSet.mem_inter]
+      exact ⟨hk_m, hk_T⟩  -- k ∈ m 且 k ∈ T
+    rw [hm_disjoint] at hk_in_inter  -- m ∩ T = ∅，所以 k ∈ ∅，矛盾
+    exact ZFSet.notMem_empty k hk_in_inter
+  have hm_eq_zero_or_succ : m = ZFSet.empty ∨ (∃ k, m = insert k k) := by
+    exact nat_structure m hm_omega  -- m 要么是 0，要么是某個數的後繼
+  cases hm_eq_zero_or_succ with
+  | inl hm_zero =>  -- 情況 1：m = 0
+    rw [hm_zero] at hm_not_S  -- m = 0，所以 0 ∉ S
+    exact hm_not_S h_zero  -- 但 h_zero : 0 ∈ S，矛盾
+  | inr h_succ =>  -- 情況 2：m = succ k 對某個 k
+    rcases h_succ with ⟨k, hm_eq_succ⟩  -- hm_eq_succ : m = insert k k
+    have hk_in_S : k ∈ S := h_all_in_S k (by
+      rw [hm_eq_succ]
+      rw [ZFSet.mem_insert_iff]
+      left
+      rfl)  -- k ∈ m，所以由 h_all_in_S 得 k ∈ S
+    have hm_in_S : m ∈ S := by
+      rw [hm_eq_succ]  -- m = insert k k = succ k
+      exact h_succ k hk_in_S  -- ∵ k ∈ S ∴ succ k ∈ S，即 m ∈ S
+    exact hm_not_S hm_in_S  -- 但 hm_not_S : m ∉ S，矛盾

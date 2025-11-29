@@ -5319,6 +5319,560 @@ theorem theorem_2_3_1_e (U 𝒜 : ZFSet) (h_nonempty : 𝒜 ≠ ∅) :
       exact hx_not_in_A (h_forall A hA)
 ```
 
+### 範例 26：子集合與集合族交集的關係
+
+**題目：** 設 `𝒜` 為非空集合族，`B` 為集合。如果 `B` 是 `𝒜` 中每個集合的子集合，則 `B` 是 `𝒜` 的交集的子集合。即 `(∀ A ∈ 𝒜, B ⊆ A) → B ⊆ ⋂_{A ∈ 𝒜} A`。
+
+**證明思路：**
+1. 假設 `B ⊆ A` 對所有 `A ∈ 𝒜` 成立。
+2. 取任意 `x ∈ B`，要證明 `x ∈ ⋂_{A ∈ 𝒜} A`。
+3. 根據交集定義，需要證明兩點：
+   - **存在性**：存在某個 `A₀ ∈ 𝒜` 使得 `x ∈ A₀`（這需要利用 `𝒜 ≠ ∅`）
+   - **全稱性**：對所有 `A ∈ 𝒜`，`x ∈ A`
+4. 因為 `𝒜` 非空，我們可以取出一個 `A₀ ∈ 𝒜`，由於 `B ⊆ A₀` 且 `x ∈ B`，所以 `x ∈ A₀`。
+5. 對於任意 `A ∈ 𝒜`，由於 `B ⊆ A` 且 `x ∈ B`，所以 `x ∈ A`。
+
+**代碼實現：**
+
+```lean
+-- Theorem 2.3.2 : Let 𝓐 be a nonempty family of sets and B be a set.
+-- (a) If B ⊆ A for all A ∈ 𝓐, then B ⊆ ⋂_{A ∈ 𝓐} A.
+theorem theorem_2_3_2_a (𝓐 B : ZFSet) (h_nonempty : 𝓐 ≠ ∅) : 
+  (∀ A ∈ 𝓐, B ⊆ A) → B ⊆ intersection_of_family 𝓐 := by
+  intro h_forall x hx -- h_forall : ∀ A ∈ 𝓐, B ⊆ A; x : 任意元素; hx : x ∈ B
+  -- 目標：證明 x ∈ ⋂ 𝓐
+  rw [mem_intersection_of_family] -- 展開交集定義：(∃ A ∈ 𝓐, x ∈ A) ∧ (∀ A ∈ 𝓐, x ∈ A)
+  constructor -- 將 ∧ 分成兩個部分
+  · -- 證明存在性：∃ A ∈ 𝓐, x ∈ A
+    -- 先從 𝓐 ≠ ∅ 推導出存在一個集合 A₀ ∈ 𝓐
+    have h_exists_A : ∃ A, A ∈ 𝓐 := by
+      by_contra h_all_empty -- 反證法：假設 ¬(∃ A, A ∈ 𝓐)
+      rw [not_exists] at h_all_empty -- 轉換為 ∀ A, A ∉ 𝓐
+      apply h_nonempty -- 要證明 𝓐 ≠ ∅，即證明 𝓐 = ∅ → False
+      apply ZFSet.ext -- 證明 𝓐 = ∅
+      intro z
+      constructor
+      · intro hz; exact False.elim (h_all_empty z hz) -- z ∈ 𝓐 與假設矛盾
+      · intro hz; exact False.elim (ZFSet.notMem_empty z hz) -- z ∈ ∅ 不可能
+    rcases h_exists_A with ⟨ A₀, hA₀ ⟩ -- 取出存在的 A₀
+    use A₀
+    constructor
+    · exact hA₀
+    · apply h_forall A₀ hA₀ -- B ⊆ A₀
+      exact hx -- x ∈ B
+  · -- 證明全稱性：∀ A ∈ 𝓐, x ∈ A
+    intro A hA
+    apply h_forall A hA -- B ⊆ A
+    exact hx -- x ∈ B
+```
+
+**關鍵技巧：**
+
+1. **處理非空條件**：`𝓐 ≠ ∅` 是否定命題，不能直接用 `rcases` 解構。需要先用反證法證明「存在 `A ∈ 𝓐`」。
+
+2. **反證法的標準模式**：
+   ```lean
+   have h_exists_A : ∃ A, A ∈ 𝓐 := by
+     by_contra h_all_empty
+     -- 從假設「不存在」推導出矛盾
+   ```
+
+3. **交集的雙重性質**：證明 `x ∈ ⋂ 𝓐` 需要同時證明：
+   - 存在性：至少在一個集合中（確保 `𝓐` 非空且 `x` 有意義）
+   - 全稱性：在每一個集合中
+
+4. **子集合的應用**：`B ⊆ A` 在 Lean 中展開為 `∀ x, x ∈ B → x ∈ A`，所以 `h_forall A hA` 得到的是一個函數，需要應用於 `hx : x ∈ B` 來得到 `x ∈ A`。
+
+### 範例 27：子集合與集合族聯集的關係（對偶定理）
+
+**題目：** 設 `𝒜` 為集合族，`B` 為集合。如果 `𝒜` 中每個集合都是 `B` 的子集合，則 `𝒜` 的聯集也是 `B` 的子集合。即 `(∀ A ∈ 𝒜, A ⊆ B) → ⋃_{A ∈ 𝒜} A ⊆ B`。
+
+**注意：** 這個定理不需要 `𝒜 ≠ ∅` 條件，因為如果 `𝒜 = ∅`，則 `⋃ 𝒜 = ∅`，自然是任何集合的子集合。
+
+**證明思路：**
+1. 假設對所有 `A ∈ 𝒜`，`A ⊆ B`。
+2. 取任意 `x ∈ ⋃_{A ∈ 𝒜} A`，要證明 `x ∈ B`。
+3. 根據聯集定義，存在某個 `A ∈ 𝒜` 使得 `x ∈ A`。
+4. 由於 `A ⊆ B` 且 `x ∈ A`，所以 `x ∈ B`。
+
+**代碼實現：**
+
+```lean
+-- (b) If A ⊆ B for all A ∈ 𝓐, then ⋃_{A ∈ 𝓐} A ⊆ B.
+theorem theorem_2_3_2_b (𝓐 B : ZFSet) : 
+  (∀ A ∈ 𝓐, A ⊆ B) → union_of_family 𝓐 ⊆ B := by
+  intro h_forall x hx -- h_forall : ∀ A ∈ 𝓐, A ⊆ B; x : 任意元素; hx : x ∈ ⋃ 𝓐
+  rw [mem_union_of_family] at hx -- 展開定義：∃ A ∈ 𝓐, x ∈ A
+  rcases hx with ⟨A, hA, hxA⟩ -- 得到 A ∈ 𝓐 且 x ∈ A
+  -- 利用前提 A ⊆ B (即 h_forall A hA) 推導
+  apply h_forall A hA
+  exact hxA
+```
+
+**關鍵技巧：**
+
+1. **聯集的簡單性**：聯集只需要證明「存在一個集合包含 `x`」，所以用 `rcases` 解構後直接應用子集合關係即可。
+
+2. **與交集的對比**：
+   - **交集**（範例 26）：需要證明「所有集合都包含 `x`」，且需要非空條件來確保存在性。
+   - **聯集**（範例 27）：只需證明「某個集合包含 `x`」，自然滿足存在性，無需非空條件。
+
+3. **對偶性**：
+   - 範例 26：`B ⊆ (所有 A) → B ⊆ ⋂ A`
+   - 範例 27：`(所有 A) ⊆ B → ⋃ A ⊆ B`
+
+---
+
+## 9. 索引集合族（Indexed Family of Sets）
+
+### 定義
+
+在集合論中，我們經常需要處理「一族集合」，其中每個集合都有一個對應的「標籤」或「索引」。這就是**索引集合族**的概念。
+
+**定義：** 設 `Δ` 為一個非空集合，對於每個 `α ∈ Δ`，都有一個對應的集合 `Aα`。則集合族 `{Aα : α ∈ Δ}` 稱為一個**索引集合族**（Indexed Family of Sets）。
+
+- **索引集（Indexing Set）**：集合 `Δ` 稱為索引集
+- **索引（Index）**：`Δ` 中的每個元素 `α` 稱為一個索引
+- **索引族（Indexed Family）**：`{Aα : α ∈ Δ}` 表示所有由索引 `α` 標記的集合 `Aα` 組成的族
+
+### 在 ZFC 中的形式化
+
+在 ZFC 集合論中，索引集合族實際上是一個**函數**的概念：
+
+1. **函數觀點**：索引族 `{Aα : α ∈ Δ}` 可以視為一個函數 `f : Δ → Sets`，其中 `f(α) = Aα`
+
+2. **集合表示**：在 ZFC 中，函數本身也是集合（有序對的集合）。因此索引族可以表示為：
+   ```
+   f = {(α, Aα) : α ∈ Δ}
+   ```
+   這是一個由有序對組成的集合。
+
+3. **與普通集合族的關係**：
+   - **普通集合族**：`𝒜 = {A₁, A₂, A₃, ...}`，只是一個集合的集合，沒有明確的順序或標籤
+   - **索引集合族**：`{Aα : α ∈ Δ}`，每個集合都有一個來自 `Δ` 的明確索引
+
+### Lean 4 中的定義
+
+```lean
+-- 索引聯集的定義：⋃_{α ∈ Δ} Aα
+-- 給定索引集 Δ 和索引函數 f : ZFSet → ZFSet
+def indexed_union (Δ : ZFSet) (f : ZFSet → ZFSet) : ZFSet :=
+  union_of_family (ZFSet.sep (fun A => ∃ α ∈ Δ, A = f α) 
+    (ZFSet.powerset (ZFSet.sUnion (ZFSet.sep (fun A => ∃ α ∈ Δ, A = f α) 
+      (ZFSet.powerset (ZFSet.sUnion Δ))))))
+```
+
+**說明：**
+- 這個定義比較複雜，因為我們需要在 ZFC 中構造「所有 `f(α)` 的集合」
+- 實際使用時，更常用的是通過**成員關係**來刻畫
+
+### 索引聯集與索引交集
+
+對於索引集合族 `{Aα : α ∈ Δ}`，我們可以定義：
+
+#### 1. 索引聯集（Indexed Union）
+
+**定義：** `⋃_{α ∈ Δ} Aα = {x : ∃ α ∈ Δ, x ∈ Aα}`
+
+**成員關係：**
+```
+x ∈ ⋃_{α ∈ Δ} Aα  ↔  ∃ α ∈ Δ, x ∈ Aα
+```
+
+**與普通聯集的關係：**
+```
+⋃_{α ∈ Δ} Aα = ⋃ {Aα : α ∈ Δ}
+```
+即索引聯集等於將所有 `Aα` 收集成一個集合族，然後取該族的聯集。
+
+#### 2. 索引交集（Indexed Intersection）
+
+**定義：** `⋂_{α ∈ Δ} Aα = {x : ∀ α ∈ Δ, x ∈ Aα}`
+
+**成員關係：**
+```
+x ∈ ⋂_{α ∈ Δ} Aα  ↔  (∃ β ∈ Δ, x ∈ Aβ) ∧ (∀ α ∈ Δ, x ∈ Aα)
+```
+
+**與普通交集的關係：**
+```
+⋂_{α ∈ Δ} Aα = ⋂ {Aα : α ∈ Δ}
+```
+即索引交集等於將所有 `Aα` 收集成一個集合族，然後取該族的交集。
+
+### 常見例子
+
+#### 例子 1：可數索引族
+
+設 `Δ = ℕ`（自然數集），對每個 `n ∈ ℕ`，定義 `Aₙ = {x ∈ ℝ : 0 < x < 1/n}`（開區間）。
+
+則：
+- `{Aₙ : n ∈ ℕ}` 是一個可數索引族
+- `⋃_{n ∈ ℕ} Aₙ = (0, 1)`（正實數中小於1的部分）
+- `⋂_{n ∈ ℕ} Aₙ = ∅`（沒有正數同時小於所有 `1/n`）
+
+#### 例子 2：連續索引族
+
+設 `Δ = [0, 1]`（實數區間），對每個 `t ∈ [0, 1]`，定義 `Aₜ = {(x, y) ∈ ℝ² : x² + y² ≤ t²}`（半徑為 `t` 的圓盤）。
+
+則：
+- `{Aₜ : t ∈ [0, 1]}` 是一個連續索引族
+- `⋃_{t ∈ [0, 1]} Aₜ = A₁`（單位圓盤）
+- `⋂_{t ∈ [0, 1]} Aₜ = A₀ = {(0, 0)}`（原點）
+
+#### 例子 3：任意索引族
+
+設 `Δ` 為任意集合，對每個 `α ∈ Δ`，定義 `Aα = {α}`（單元素集合）。
+
+則：
+- `⋃_{α ∈ Δ} Aα = Δ`
+- `⋂_{α ∈ Δ} Aα = ∅`（當 `Δ` 有至少兩個不同元素時）
+
+### 與之前概念的關係
+
+索引集合族與我們之前學習的集合族概念本質上是一致的：
+
+1. **`union_of_family 𝒜`** ≈ `⋃_{α ∈ Δ} Aα`
+   - 前者：對集合族 `𝒜` 中的所有集合取聯集
+   - 後者：對索引族 `{Aα : α ∈ Δ}` 中的所有集合取聯集
+
+2. **`intersection_of_family 𝒜`** ≈ `⋂_{α ∈ Δ} Aα`
+   - 前者：對集合族 `𝒜` 中的所有集合取交集
+   - 後者：對索引族 `{Aα : α ∈ Δ}` 中的所有集合取交集
+
+**主要區別：**
+- 索引族**明確標識**了索引集 `Δ` 和每個索引 `α`
+- 索引族強調了集合與索引之間的**對應關係**（函數性質）
+- 普通集合族只是「一堆集合」，沒有特定的標籤結構
+
+### 形式化的注意事項
+
+**重要說明：** 完整的索引族形式化需要先定義以下概念：
+
+1. **關係（Relation）**：有序對的集合
+2. **函數（Function）**：滿足單值性的關係
+3. **定義域（Domain）**：函數的輸入集合
+4. **值域（Range）**：函數的輸出集合
+5. **像集（Image）**：函數在某個子集上的所有輸出值
+
+這些概念通常在「關係與函數」章節中系統地定義。目前我們給出的是索引族的**概念框架**，為後續形式化做準備。
+
+在實際使用中，我們可以：
+- 使用 `union_of_family` 和 `intersection_of_family` 來處理索引族
+- 理解索引族作為一種特殊的集合族（帶有明確索引結構）
+- 等待後續章節完善函數和關係的完整理論
+
+### 索引族的優勢
+
+使用索引族而非普通集合族的優勢：
+
+1. **清晰的標識**：每個集合都有明確的標籤，便於引用和討論
+2. **可數性討論**：可以討論索引集的大小（有限、可數、不可數）
+3. **序列化表示**：當 `Δ = ℕ` 時，索引族變成序列 `A₀, A₁, A₂, ...`
+4. **參數化**：索引可以攜帶參數信息（如上面例子中的半徑 `t`）
+
+---
+
+## 10. 成對不交（Pairwise Disjoint）
+
+### 定義
+
+**定義：** 索引集合族 `{Aα : α ∈ Δ}` 稱為**成對不交的**（Pairwise Disjoint），如果對於所有 `α, β ∈ Δ`，滿足以下條件之一：
+- `Aα = Aβ`（兩個集合相同）
+- `Aα ∩ Aβ = ∅`（兩個集合不交）
+
+換句話說，索引族中任意兩個**不同**的集合都是不交的。
+
+### Lean 4 中的定義
+
+```lean
+-- 成對不交的定義
+def pairwise_disjoint (Δ : ZFSet) (f : ZFSet → ZFSet) : Prop :=
+  ∀ α ∈ Δ, ∀ β ∈ Δ, f α = f β ∨ f α ∩ f β = ∅
+```
+
+**說明：**
+- `f : ZFSet → ZFSet` 表示索引函數，`f α` 是索引 `α` 對應的集合 `Aα`
+- 條件 `f α = f β ∨ f α ∩ f β = ∅` 表示：要麼兩個集合相同，要麼它們不交
+- 這個定義自動處理了 `α = β` 的情況（此時 `f α = f β` 成立）
+
+### 等價的表述
+
+成對不交可以有多種等價的表述方式：
+
+1. **原始定義**：`∀ α, β ∈ Δ, Aα = Aβ ∨ Aα ∩ Aβ = ∅`
+
+2. **排除相等的版本**：`∀ α, β ∈ Δ, α ≠ β → Aα ∩ Aβ = ∅`
+   - 只對**不同**的索引要求集合不交
+
+3. **使用不交的定義**：`∀ α, β ∈ Δ, α ≠ β → (∀ x, x ∈ Aα → x ∉ Aβ)`
+   - 任何元素不能同時屬於兩個不同的集合
+
+### 例子
+
+#### 例子 1：成對不交的集合族
+
+設 `Δ = {1, 2, 3}`，定義：
+- `A₁ = {a, b}`
+- `A₂ = {c, d}`
+- `A₃ = {e, f}`
+
+這個索引族是成對不交的，因為：
+- `A₁ ∩ A₂ = ∅`
+- `A₁ ∩ A₃ = ∅`
+- `A₂ ∩ A₃ = ∅`
+
+#### 例子 2：不是成對不交的集合族
+
+設 `Δ = {1, 2, 3}`，定義：
+- `A₁ = {a, b, c}`
+- `A₂ = {b, c, d}`
+- `A₃ = {e, f}`
+
+這個索引族**不是**成對不交的，因為：
+- `A₁ ∩ A₂ = {b, c} ≠ ∅`（雖然 `A₁ ∩ A₃ = ∅` 且 `A₂ ∩ A₃ = ∅`）
+
+#### 例子 3：實數區間的分割
+
+設 `Δ = ℤ`（整數集），對每個 `n ∈ ℤ` 定義：
+```
+Aₙ = [n, n+1) = {x ∈ ℝ : n ≤ x < n+1}
+```
+
+這個索引族是成對不交的，因為：
+- 對於 `n ≠ m`，區間 `[n, n+1)` 和 `[m, m+1)` 沒有交集
+- 這個族構成了整個實數軸 `ℝ` 的一個**分割**（partition）
+
+### 成對不交的重要性
+
+成對不交的概念在集合論中非常重要，主要原因：
+
+1. **分割（Partition）**：
+   - 成對不交的集合族可以將一個大集合分割成不重疊的小塊
+   - 例如：將實數軸分割成區間，將平面分割成區域
+
+2. **唯一性**：
+   - 如果 `{Aα : α ∈ Δ}` 成對不交，則每個元素 `x ∈ ⋃_{α ∈ Δ} Aα` 恰好屬於**一個** `Aα`
+   - 這保證了元素到索引的對應是唯一的
+
+3. **計數原理**：
+   - 如果集合族成對不交，則聯集的大小等於各個集合大小之和
+   - `|⋃_{α ∈ Δ} Aα| = Σ_{α ∈ Δ} |Aα|`（離散情況）
+
+4. **測度論**：
+   - 在測度論中，可加性要求集合族成對不交
+   - `μ(⋃_{i=1}^n Aᵢ) = Σ_{i=1}^n μ(Aᵢ)` 當集合族成對不交時成立
+
+### 與普通不交的區別
+
+- **兩個集合不交**：`A ∩ B = ∅`
+  - 只涉及兩個集合的關係
+
+- **集合族成對不交**：`∀ α ≠ β, Aα ∩ Aβ = ∅`
+  - 涉及集合族中**所有**不同集合對的關係
+  - 是一個更強的條件
+
+**例子：**
+- 集合族 `{A, B, C}` 即使 `A ∩ B = ∅` 且 `B ∩ C = ∅`，也不一定成對不交
+- 還需要檢查 `A ∩ C = ∅`
+
+### 應用場景
+
+1. **等價類**：將集合劃分為互不相交的等價類
+2. **分類問題**：將對象分成互不重疊的類別
+3. **概率空間**：事件空間的分割
+4. **圖論**：頂點的染色問題（相同顏色的頂點集合成對不交）
+
+---
+
+## 11. Omega 的最小性 (Minimality of Omega)
+
+### 定義：歸納集（Inductive Set）
+
+**定義：** 集合 `S` 稱為**歸納集**（Inductive Set），如果：
+1. `0 ∈ S`（空集屬於 `S`）
+2. 對所有 `n ∈ S`，有 `succ n ∈ S`（如果 `n` 在 `S` 中，則 `n` 的後繼也在 `S` 中）
+
+其中 `succ n = insert n n = n ∪ {n}` 是 `n` 的後繼。
+
+### Lean 4 中的定義
+
+```lean
+def is_inductive (S : ZFSet) : Prop :=
+  ZFSet.empty ∈ S ∧ ∀ n ∈ S, (insert n n) ∈ S
+```
+
+**說明：**
+- `ZFSet.empty ∈ S` 表示 `0 ∈ S`
+- `∀ n ∈ S, (insert n n) ∈ S` 表示對所有 `n ∈ S`，有 `succ n ∈ S`
+
+### Omega 是歸納集
+
+**定理：** `omega` 本身是一個歸納集。
+
+```lean
+theorem omega_is_inductive : is_inductive ZFSet.omega := by
+  constructor
+  · exact ZFSet.omega_zero  -- 0 ∈ omega
+  · intro n hn
+    exact ZFSet.omega_succ hn  -- 如果 n ∈ omega，則 succ n ∈ omega
+```
+
+### 輔助公設
+
+為了證明 omega 的最小性，我們需要以下三個基本性質：
+
+#### 1. 正則公設（Axiom of Regularity）
+
+**公設：** 對於任何非空集合 `T`，存在元素 `m ∈ T` 使得 `m ∩ T = ∅`。
+
+```lean
+axiom regularity_axiom (T : ZFSet) (h_nonempty : T ≠ ZFSet.empty) :
+  ∃ m ∈ T, m ∩ T = ZFSet.empty
+```
+
+**說明：**
+- 正則公設是 ZFC 的公設之一
+- 它保證了集合論中不存在無限下降鏈
+- `m ∩ T = ∅` 意味著 `m` 是 `T` 的"最小"元素（在 `∈` 關係下）
+
+#### 2. Omega 的傳遞性（Transitivity of Omega）
+
+**公設：** 在 von Neumann 構造中，如果 `m ∈ omega` 且 `k ∈ m`，則 `k ∈ omega`。
+
+```lean
+axiom omega_transitive_axiom (m k : ZFSet) (hm_omega : m ∈ ZFSet.omega) (hk_m : k ∈ m) :
+  k ∈ ZFSet.omega
+```
+
+**說明：**
+- 在 von Neumann 構造中，每個自然數都包含所有比它小的自然數
+- 所以如果 `m` 是自然數，且 `k` 是 `m` 的元素，則 `k` 也是自然數
+- 這是 omega 定義的直接推論
+
+#### 3. 自然數的結構（Structure of Natural Numbers）
+
+**公設：** 在 von Neumann 構造中，每個自然數要么是 `0`，要么是某個數的後繼。
+
+```lean
+axiom nat_structure_axiom (m : ZFSet) (hm_omega : m ∈ ZFSet.omega) :
+  m = ZFSet.empty ∨ (∃ k, m = insert k k)
+```
+
+**說明：**
+- 在 von Neumann 構造中，自然數的定義是：
+  - `0 = ∅`
+  - `n+1 = n ∪ {n} = insert n n`
+- 所以每個自然數要么是 `0`，要么是某個數的後繼
+- 這是 omega 定義的直接推論
+
+### 定理：Omega 的最小性
+
+**定理：** 如果 `S` 是歸納集，則 `omega ⊆ S`。
+
+換句話說，`omega` 是**最小的**歸納集。
+
+```lean
+theorem omega_minimal (S : ZFSet)
+  (h_inductive : is_inductive S):
+  ZFSet.omega ⊆ S := by
+  rcases h_inductive with ⟨h_zero, h_succ⟩
+  intro x hx_omega
+  by_contra hx_not_in_S
+  let T := ZFSet.sep (fun y => y ∉ S) ZFSet.omega
+  have hx_in_T : x ∈ T := by
+    rw [ZFSet.mem_sep]
+    exact ⟨hx_omega, hx_not_in_S⟩
+  have h_T_nonempty : T ≠ ZFSet.empty := by
+    intro h_T_empty
+    rw [h_T_empty] at hx_in_T
+    exact ZFSet.notMem_empty x hx_in_T
+  have h_reg : ∃ m ∈ T, m ∩ T = ZFSet.empty := by
+    exact regularity_applied T h_T_nonempty
+  rcases h_reg with ⟨m, hm_T, hm_disjoint⟩
+  have hm_omega : m ∈ ZFSet.omega := by
+    rw [ZFSet.mem_sep] at hm_T
+    exact hm_T.left
+  have hm_not_S : m ∉ S := by
+    rw [ZFSet.mem_sep] at hm_T
+    exact hm_T.right
+  have h_all_in_S : ∀ k ∈ m, k ∈ S := by
+    intro k hk_m
+    by_contra hk_not_S
+    have hk_T : k ∈ T := by
+      rw [ZFSet.mem_sep]
+      constructor
+      · exact omega_transitive m k hm_omega hk_m
+      · exact hk_not_S
+    have hk_in_inter : k ∈ m ∩ T := by
+      rw [ZFSet.mem_inter]
+      exact ⟨hk_m, hk_T⟩
+    rw [hm_disjoint] at hk_in_inter
+    exact ZFSet.notMem_empty k hk_in_inter
+  have hm_eq_zero_or_succ : m = ZFSet.empty ∨ (∃ k, m = insert k k) := by
+    exact nat_structure m hm_omega
+  cases hm_eq_zero_or_succ with
+  | inl hm_zero =>
+    rw [hm_zero] at hm_not_S
+    exact hm_not_S h_zero
+  | inr h_succ =>
+    rcases h_succ with ⟨k, hm_eq_succ⟩
+    have hk_in_S : k ∈ S := h_all_in_S k (by
+      rw [hm_eq_succ]
+      rw [ZFSet.mem_insert_iff]
+      left
+      rfl)
+    have hm_in_S : m ∈ S := by
+      rw [hm_eq_succ]
+      exact h_succ k hk_in_S
+    exact hm_not_S hm_in_S
+```
+
+### 證明思路
+
+**證明策略：** 使用反證法和正則公設。
+
+1. **假設存在 `x ∈ omega` 但 `x ∉ S`**
+   - 構造集合 `T = {y ∈ omega : y ∉ S}`
+   - `T` 非空（因為 `x ∈ T`）
+
+2. **使用正則公設**
+   - 由正則公設，`T` 有最小元素 `m`
+   - `m ∈ omega` 且 `m ∉ S`
+   - `m ∩ T = ∅`（`m` 的所有元素都不在 `T` 中）
+
+3. **證明 `m` 的所有元素都在 `S` 中**
+   - 如果 `k ∈ m` 但 `k ∉ S`，則 `k ∈ T`
+   - 但 `k ∈ m ∩ T`，與 `m ∩ T = ∅` 矛盾
+   - 所以對所有 `k ∈ m`，有 `k ∈ S`
+
+4. **使用自然數的結構**
+   - `m = 0` 或 `m = succ k` 對某個 `k`
+   - 如果 `m = 0`，則 `0 ∉ S`，與 `h_zero` 矛盾
+   - 如果 `m = succ k`，則 `k ∈ S`（由步驟 3），所以 `m = succ k ∈ S`（由 `h_succ`），與 `m ∉ S` 矛盾
+
+### 關鍵觀察
+
+1. **Omega 是最小的歸納集**
+   - 在 ZFC 中，`omega` 通常定義為所有歸納集的交集
+   - 因此 `omega` 包含於任何歸納集中
+
+2. **正則公設的作用**
+   - 保證了我們可以找到"最小"的元素
+   - 避免了無限下降鏈的問題
+
+3. **Von Neumann 構造的性質**
+   - 每個自然數都包含所有比它小的自然數
+   - 每個自然數要么是 `0`，要么是某個數的後繼
+
+### 應用
+
+Omega 的最小性是證明**數學歸納法原理**（Principle of Mathematical Induction）的關鍵。如果一個性質 `P` 滿足：
+- `P(0)`（基始步驟）
+- 對所有 `n ∈ omega`，`P(n) → P(succ n)`（歸納步驟）
+
+則對所有 `n ∈ omega`，`P(n)` 成立。
+
 ---
 
 ## 常用技巧總結
