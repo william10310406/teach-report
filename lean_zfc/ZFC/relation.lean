@@ -86,28 +86,17 @@ theorem mem_is_relation (R A B x : ZFSet) : x ∈ is_relation R A B ↔ x ∈ pr
 --Definition: The identity relation on A is the set {(a, a) | a ∈ A}.
 def identity_relation (A : ZFSet) : ZFSet :=
   ZFSet.sep (fun x => ∃ a ∈ A, x = ordered_pair a a)
-            (ZFSet.powerset (ZFSet.powerset (A ∪ A)))
+            (product A A)
 
 theorem mem_identity_relation (A x :ZFSet) : x ∈ identity_relation A ↔ ∃ a ∈ A, x = ordered_pair a a := by
   rw [identity_relation] -- 展開 identity_relation 的定義：identity_relation A = ZFSet.sep (fun x => ∃ a ∈ A, x = ordered_pair a a) (ZFSet.powerset (ZFSet.powerset (A ∪ A)))
   rw [ZFSet.mem_sep] -- 使用分離公設的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
   constructor -- 將 ↔ 分成兩個方向
-  · intro ⟨hx_in_powerset, h_exists⟩
+  · intro ⟨hx_in_product_A_A, h_exists⟩
     exact h_exists
-  · intro h_exists
+  · intro h
+    rcases h with ⟨a, ha, h_eq⟩ --將存在量詞分解成 a ∈ A, x = ordered_pair a a
     constructor
-    · rcases h_exists with ⟨a, ha, h_eq⟩ --將存在量詞分解成 a ∈ A, x = ordered_pair a a
-      rw [ordered_pair] at h_eq
-      apply ZFSet.mem_powerset.mpr --證明 {{a}, {a, a}} ∈ powerset (A ∪ A)，即 {{a}, {a, a}} ⊆ A ∪ A
-      intro z hz -- z : any arbitrary element, hz : z ∈ {{a}, {a, a}}
-      rw [h_eq] at hz --將 x = ordered_pair a a 重寫為 z = {{a}, {a, a}}
-      rw [ZFSet.mem_pair] at hz --將 z ∈ {{a}, {a, a}} 拆成 z = {a} ∨ z = {a, a}
-      cases hz with
-      | inl hz_eq => -- z = {a}
-        rw [hz_eq] --將 z 重寫為 {a}
-        apply ZFSet.mem_powerset.mpr --證明 {a} ∈ powerset (A ∪ A)，即 {a} ⊆ A ∪ A
-        intro w hw -- w : any arbitrary element, hw : w ∈ {a}
-        rw [ZFSet.mem_singleton] at hw --將 w ∈ {a} 轉換為 w = a
-        rw [hw] --將 w 重寫為 a
-        rw [ZFSet.mem_union] --將 a ∈ A ∪ A 拆成 a ∈ A ∨ a ∈ A
-        left
+    · rw [mem_product]
+      exact ⟨a, ha, a, ha, h_eq⟩
+    · exact ⟨a, ha, h_eq⟩
