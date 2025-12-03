@@ -34,41 +34,50 @@ lemma ordered_pair_eq_left {a b a' b' : ZFSet} :ordered_pair a b = ordered_pair 
     exact h_aprime_in.symm
 
 lemma ordered_pair_eq_right {a b a' b' : ZFSet} :ordered_pair a b = ordered_pair a' b' → b = b' := by -- 假設兩個有序對相等，目標是推出第二個分量相等
-  intro h -- 引入假設 h : ordered_pair a b = ordered_pair a' b'
-  have hab_mem : {a, b} ∈ ordered_pair a b := by -- 構造事實：{a, b} 是有序對 ordered_pair a b 的一個元素
-    rw [ordered_pair] -- 在目標中展開 ordered_pair 的定義
-    rw [ordered_pair] at h -- 同時在假設 h 中展開 ordered_pair 的定義
-    apply ZFSet.mem_pair.mpr -- 使用配對公理：x ∈ {y, z} ↔ x = y ∨ x = z
-    right -- 選擇右側分支，證明 {a, b} = {a, b}
-    rfl -- 由反身性可得 {a, b} = {a, b}
-  rw [h] at hab_mem -- 用集合相等的假設 h 改寫 hab_mem
-  rw [ordered_pair] at hab_mem -- 在新的目標中展開右側的 ordered_pair 定義
-  rw [ZFSet.mem_pair] at hab_mem -- 把「屬於二元集合」改寫成析取形式
-  cases hab_mem with -- 對析取情形做分類討論
-  | inl h_eq_a => -- 第一種情況：{a, b} = {a'}
-      have hb_eqa' : b = a' := by -- 先證明 b = a'
-        have : b ∈ ({a, b} : ZFSet) := ZFSet.mem_pair.mpr (Or.inr rfl) -- b 是 {a, b} 的元素
-        rw [h_eq_a] at this -- 利用 {a, b} = {a'} 將 membership 改寫到 {a'}
-        rwa [ZFSet.mem_singleton] at this -- 再利用單元素集合的性質推出 b = a'
-
-      have ha_eqa' : a = a' := by -- 接著證明 a = a'
-        have : a ∈ ({a, b} : ZFSet) := ZFSet.mem_pair.mpr (Or.inl rfl) -- a 也是 {a, b} 的元素
-        rw [h_eq_a] at this -- 同樣利用 {a, b} = {a'} 改寫
-        rwa [ZFSet.mem_singleton] at this -- 用單元素集合性質得到 a = a'
-      rw [hb_eqa', ha_eqa'] at h -- 將 a, b 都改寫成 a'，使左邊變成 ordered_pair a' a'
-      rw [ordered_pair] at h -- 展開左邊的 ordered_pair，得到 {{a'}, {a', a'}}
-
-      have h_target_in : {a, b'} ∈ ordered_pair a' b' := by -- 準備構造 {a, b'} ∈ ordered_pair a' b'
-        rw [ordered_pair] -- 展開目標中的 ordered_pair 定義
-        apply ZFSet.mem_pair.mpr -- 再次使用配對公理
-        right -- 取右側分支，目標成為 {a, b'} = {a', b'}
-        rw [ha_eqa'] -- 用 a = a' 把 {a, b'} 改寫為 {a', b'}
-      rw [← h] at h_target_in -- 把相等式 h 反向套用到 h_target_in 上
-      rw [hb_eq_a, ordered_pair, ZFSet.pair_eq_singleton] at h_target_in -- 利用 b = a（假設已證）以及 pair_eq_singleton 把目標進一步化簡
-
-
-
-
+  intro h
+  have ha_eq : a = a' := ordered_pair_eq_left h
+  rw [← ha_eq] at h
+  rw [ordered_pair, ordered_pair] at h
+  have h_pair : ({a, b} : ZFSet) = ({a, b'} : ZFSet) := by
+    have h_in_lhs : {a, b} ∈ {{a}, {a, b}} := ZFSet.mem_pair.mpr (Or.inr rfl)
+    rw [h] at h_in_lhs
+    rw [ZFSet.mem_pair] at h_in_lhs
+    cases h_in_lhs with
+    | inl h_eq_a =>
+      rw [h_eq_a] at h
+      have h_ab'_in_lhs : {a, b'} ∈ ({ {a}, {a} } : ZFSet) := by
+        rw [h]
+        apply ZFSet.mem_pair.mpr
+        right
+        exact rfl
+      rw [ZFSet.mem_pair] at h_ab'_in_lhs
+      cases h_ab'_in_lhs with
+      | inl h_l =>
+        rw [h_l]
+        exact h_eq_a
+      | inr h_r =>
+        rw [h_r]
+        exact h_eq_a
+    | inr h_eq_a_b =>
+      exact h_eq_a_b
+  have h_b_in : b ∈ {a, b} := ZFSet.mem_pair.mpr (Or.inr rfl)
+  rw [h_pair] at h_b_in
+  rw [ZFSet.mem_pair] at h_b_in
+  cases h_b_in with
+  | inr h_eq_b =>
+    exact h_eq_b
+  | inl h_eq_a =>
+    rw [h_eq_a] at h_pair
+    have h_b_in_lhs : b' ∈ {a, b'} := ZFSet.mem_pair.mpr (Or.inr rfl)
+    rw [← h_pair] at h_b_in_lhs
+    rw [ZFSet.mem_pair] at h_b_in_lhs
+    cases h_b_in_lhs with
+    | inl h_l =>
+      rw [h_l]
+      exact h_eq_a
+    | inr h_r =>
+      rw [h_r]
+      exact h_eq_a
 
 
 
