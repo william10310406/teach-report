@@ -1,5 +1,5 @@
 import Mathlib.SetTheory.ZFC.Basic
---2.3 Relations and Partitions
+--3. Relations and Partitions
 
 -- 有序對 (Ordered Pair) 定義 (Kuratowski definition)
 -- (a, b) = {{a}, {a, b}}
@@ -8,6 +8,73 @@ def ordered_pair (a b : ZFSet) : ZFSet :=
 
 theorem mem_ordered_pair (a b x : ZFSet) : x ∈ ordered_pair a b ↔ x = {a} ∨ x = {a, b} :=
   ZFSet.mem_pair
+
+-- Kuratowski ordered pair uniqueness (minimal version)
+lemma ordered_pair_eq_left {a b a' b' : ZFSet} :ordered_pair a b = ordered_pair a' b' → a = a' := by
+  intro h
+  have ha_mem : {a} ∈ ordered_pair a b := by
+    rw [ordered_pair]
+    rw [ordered_pair, ordered_pair] at h
+    apply ZFSet.mem_pair.mpr -- 1. 使用配對公理：x ∈ {y, z} ↔ x = y ∨ x = z
+    left                     -- 2. 我們選擇證明左邊的情況 (即 {a} = {a})
+    rfl                      -- 3. 左邊等於左邊，證畢
+  rw [h] at ha_mem
+  rw [ordered_pair] at ha_mem
+  rw [ZFSet.mem_pair] at ha_mem
+  cases ha_mem with
+  | inl h_eq_a =>
+    have h_a_in : a ∈ ({a} : ZFSet) := ZFSet.mem_singleton.mpr rfl
+    rw [h_eq_a] at h_a_in
+    rw [ZFSet.mem_singleton] at h_a_in
+    exact h_a_in
+  | inr h_eq_a_b =>
+    have h_aprime_in : a' ∈ ({a', b'} : ZFSet) := ZFSet.mem_pair.mpr (Or.inl rfl)
+    rw [← h_eq_a_b] at h_aprime_in
+    rw [ZFSet.mem_singleton] at h_aprime_in
+    exact h_aprime_in.symm
+
+lemma ordered_pair_eq_right {a b a' b' : ZFSet} :ordered_pair a b = ordered_pair a' b' → b = b' := by -- 假設兩個有序對相等，目標是推出第二個分量相等
+  intro h -- 引入假設 h : ordered_pair a b = ordered_pair a' b'
+  have hab_mem : {a, b} ∈ ordered_pair a b := by -- 構造事實：{a, b} 是有序對 ordered_pair a b 的一個元素
+    rw [ordered_pair] -- 在目標中展開 ordered_pair 的定義
+    rw [ordered_pair] at h -- 同時在假設 h 中展開 ordered_pair 的定義
+    apply ZFSet.mem_pair.mpr -- 使用配對公理：x ∈ {y, z} ↔ x = y ∨ x = z
+    right -- 選擇右側分支，證明 {a, b} = {a, b}
+    rfl -- 由反身性可得 {a, b} = {a, b}
+  rw [h] at hab_mem -- 用集合相等的假設 h 改寫 hab_mem
+  rw [ordered_pair] at hab_mem -- 在新的目標中展開右側的 ordered_pair 定義
+  rw [ZFSet.mem_pair] at hab_mem -- 把「屬於二元集合」改寫成析取形式
+  cases hab_mem with -- 對析取情形做分類討論
+  | inl h_eq_a => -- 第一種情況：{a, b} = {a'}
+      have hb_eqa' : b = a' := by -- 先證明 b = a'
+        have : b ∈ ({a, b} : ZFSet) := ZFSet.mem_pair.mpr (Or.inr rfl) -- b 是 {a, b} 的元素
+        rw [h_eq_a] at this -- 利用 {a, b} = {a'} 將 membership 改寫到 {a'}
+        rwa [ZFSet.mem_singleton] at this -- 再利用單元素集合的性質推出 b = a'
+
+      have ha_eqa' : a = a' := by -- 接著證明 a = a'
+        have : a ∈ ({a, b} : ZFSet) := ZFSet.mem_pair.mpr (Or.inl rfl) -- a 也是 {a, b} 的元素
+        rw [h_eq_a] at this -- 同樣利用 {a, b} = {a'} 改寫
+        rwa [ZFSet.mem_singleton] at this -- 用單元素集合性質得到 a = a'
+      rw [hb_eqa', ha_eqa'] at h -- 將 a, b 都改寫成 a'，使左邊變成 ordered_pair a' a'
+      rw [ordered_pair] at h -- 展開左邊的 ordered_pair，得到 {{a'}, {a', a'}}
+
+      have h_target_in : {a, b'} ∈ ordered_pair a' b' := by -- 準備構造 {a, b'} ∈ ordered_pair a' b'
+        rw [ordered_pair] -- 展開目標中的 ordered_pair 定義
+        apply ZFSet.mem_pair.mpr -- 再次使用配對公理
+        right -- 取右側分支，目標成為 {a, b'} = {a', b'}
+        rw [ha_eqa'] -- 用 a = a' 把 {a, b'} 改寫為 {a', b'}
+      rw [← h] at h_target_in -- 把相等式 h 反向套用到 h_target_in 上
+      rw [hb_eq_a, ordered_pair, ZFSet.pair_eq_singleton] at h_target_in -- 利用 b = a（假設已證）以及 pair_eq_singleton 把目標進一步化簡
+
+
+
+
+
+
+
+
+
+
 
 -- 笛卡爾積 (Cartesian Product) 定義
 -- A × B = { (a, b) | a ∈ A, b ∈ B }
@@ -59,27 +126,30 @@ theorem mem_product (A B x : ZFSet) : x ∈ product A B ↔ ∃ a ∈ A, ∃ b �
 
 
 --Definition: A binary relation R from A to B is a subset of A × B.
-def is_relation (R A B : ZFSet) : ZFSet :=
-  ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair a b)
-            (product A B)
+def is_relation (R A B : ZFSet) : Prop :=
+  ∀ x ∈ R, x ∈ product A B
 
-theorem mem_is_relation (R A B x : ZFSet) : x ∈ is_relation R A B ↔ x ∈ product A B ∧ x ∈ R := by
-  rw [is_relation] -- 展開 is_relation 的定義：is_relation R A B = ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair a b) (ZFSet.powerset (ZFSet.powerset (A ∪ B)))
-  rw [ZFSet.mem_sep] -- 使用分離公設的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
-  constructor -- 將 ↔ 分成兩個方向
-  · intro ⟨hx_in_product_A_B, h_exists⟩
-    rcases h_exists with ⟨a, ha, b, hb, hR, h_eq⟩ --將存在量詞分解成 a ∈ A, b ∈ B, ordered_pair a b ∈ R, x = ordered_pair a b
-    constructor
-    · exact hx_in_product_A_B
-    · rw [h_eq] --將 x = ordered_pair a b 重寫為 x = ordered_pair a b
-      exact hR
-  · intro ⟨hx_in_product_A_B, hx_in_R⟩
-    constructor
-    · exact hx_in_product_A_B
-    · rw [mem_product] at hx_in_product_A_B
-      rcases hx_in_product_A_B with ⟨a, ha, b, hb, h_eq⟩
-      rw [h_eq] at hx_in_R
-      exact ⟨a, ha, b, hb, hx_in_R, h_eq⟩
+-- def is_relation (R A B : ZFSet) : ZFSet :=
+--   ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair a b)
+--             (product A B)
+
+-- theorem mem_is_relation (R A B x : ZFSet) : x ∈ is_relation R A B ↔ x ∈ product A B ∧ x ∈ R := by
+--   rw [is_relation] -- 展開 is_relation 的定義：is_relation R A B = ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair a b) (ZFSet.powerset (ZFSet.powerset (A ∪ B)))
+--   rw [ZFSet.mem_sep] -- 使用分離公設的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
+--   constructor -- 將 ↔ 分成兩個方向
+--   · intro ⟨hx_in_product_A_B, h_exists⟩
+--     rcases h_exists with ⟨a, ha, b, hb, hR, h_eq⟩ --將存在量詞分解成 a ∈ A, b ∈ B, ordered_pair a b ∈ R, x = ordered_pair a b
+--     constructor
+--     · exact hx_in_product_A_B
+--     · rw [h_eq] --將 x = ordered_pair a b 重寫為 x = ordered_pair a b
+--       exact hR
+--   · intro ⟨hx_in_product_A_B, hx_in_R⟩
+--     constructor
+--     · exact hx_in_product_A_B
+--     · rw [mem_product] at hx_in_product_A_B
+--       rcases hx_in_product_A_B with ⟨a, ha, b, hb, h_eq⟩
+--       rw [h_eq] at hx_in_R
+--       exact ⟨a, ha, b, hb, hx_in_R, h_eq⟩
 
 
 
@@ -100,3 +170,31 @@ theorem mem_identity_relation (A x :ZFSet) : x ∈ identity_relation A ↔ ∃ a
     · rw [mem_product]
       exact ⟨a, ha, a, ha, h_eq⟩
     · exact ⟨a, ha, h_eq⟩
+
+
+
+--Definition: The domain of a relation R from A to B is the set of all first components of the ordered pairs in R.
+def domain (R A B : ZFSet) : ZFSet :=
+  ZFSet.sep (fun a => ∃ b ∈ B, ordered_pair a b ∈ R) (A)
+
+theorem mem_domain (R A B a : ZFSet)(hR : is_relation R A B) :
+  a ∈ domain R A B ↔ ∃ b ∈ B, ordered_pair a b ∈ R := by
+  rw [domain] -- 展開 domain 的定義：domain R A B = ZFSet.sep (fun a => ∃ b ∈ B, ordered_pair a b ∈ R) (A)
+  rw [ZFSet.mem_sep] -- 使用分離公設的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
+  constructor -- 將 ↔ 分成兩個方向
+  · intro h -- h : a ∈ domain R A B
+    exact h.2 -- 直接使用 h.2
+  · intro h_exist
+    rcases h_exist with ⟨b, hbB, hpair⟩ -- 分解存在量詞，得到 b ∈ B, hpair : ordered_pair a b ∈ R
+    rw [is_relation] at hR -- 使用 is_relation：ordered_pair a b ∈ R → a ∈ A ∧ b ∈ B
+    have hprod : ordered_pair a b ∈ product A B :=
+      hR (ordered_pair a b) hpair -- 使用 is_relation：ordered_pair a b ∈ R → a ∈ A ∧ b ∈ B
+    have hAB : a ∈ A ∧ b ∈ B := by
+      rw [mem_product] at hprod
+      rcases hprod with ⟨a', ha', b', hb', h_eq⟩
+      have ha_eq : a = a' := ordered_pair_eq_left h_eq
+      have ha : a ∈ A := by
+        rw [ha_eq]
+        exact ha'
+      exact ⟨ha, hbB⟩
+    exact ⟨hAB.left, ⟨b, hbB, hpair⟩⟩
