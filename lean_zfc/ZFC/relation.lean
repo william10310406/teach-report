@@ -80,11 +80,6 @@ lemma ordered_pair_eq_right {a b a' b' : ZFSet} :ordered_pair a b = ordered_pair
       exact h_eq_a
 
 
-
-
-
-
-
 -- 笛卡爾積 (Cartesian Product) 定義
 -- A × B = { (a, b) | a ∈ A, b ∈ B }
 -- 在 ZFC 中，我們需要從一個足夠大的集合（A ∪ B 的冪集的冪集）中分離出有序對
@@ -198,12 +193,34 @@ theorem mem_domain (R A B a : ZFSet)(hR : is_relation R A B) :
     rw [is_relation] at hR -- 使用 is_relation：ordered_pair a b ∈ R → a ∈ A ∧ b ∈ B
     have hprod : ordered_pair a b ∈ product A B :=
       hR (ordered_pair a b) hpair -- 使用 is_relation：ordered_pair a b ∈ R → a ∈ A ∧ b ∈ B
-    have hAB : a ∈ A ∧ b ∈ B := by
+    have haA : a ∈ A := by
       rw [mem_product] at hprod
       rcases hprod with ⟨a', ha', b', hb', h_eq⟩
       have ha_eq : a = a' := ordered_pair_eq_left h_eq
-      have ha : a ∈ A := by
-        rw [ha_eq]
-        exact ha'
-      exact ⟨ha, hbB⟩
-    exact ⟨hAB.left, ⟨b, hbB, hpair⟩⟩
+      rw [ha_eq]
+      exact ha'
+    exact ⟨haA, ⟨b, hbB, hpair⟩⟩
+
+
+def range (R A B : ZFSet) : ZFSet :=
+  ZFSet.sep (fun b => ∃ a ∈ A, ordered_pair a b ∈ R) (B)
+
+theorem mem_range (R A B b : ZFSet)(hR : is_relation R A B) :
+  b ∈ range R A B ↔ ∃ a ∈ A, ordered_pair a b ∈ R := by
+  rw [range] -- 展開 range 的定義：range R A B = ZFSet.sep (fun b => ∃ a ∈ A, ordered_pair a b ∈ R) (B)
+  rw [ZFSet.mem_sep] -- 使用分離公設的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
+  constructor -- 將 ↔ 分成兩個方向
+  · intro h -- h : b ∈ range R A B
+    exact h.2 -- 直接使用 h.2
+  · intro h_exist
+    rcases h_exist with ⟨a, haA, hpair⟩ -- 分解存在量詞，得到 a ∈ A, hpair : ordered_pair a b ∈ R
+    rw [is_relation] at hR -- 使用 is_relation：ordered_pair a b ∈ R → a ∈ A ∧ b ∈ B
+    have hprod : ordered_pair a b ∈ product A B :=
+      hR (ordered_pair a b) hpair -- 使用 is_relation：ordered_pair a b ∈ R → a ∈ A ∧ b ∈ B
+    have hbB : b ∈ B := by
+      rw [mem_product] at hprod
+      rcases hprod with ⟨a', ha', b', hb', h_eq⟩
+      have hb_eq : b = b' := ordered_pair_eq_right h_eq
+      rw [hb_eq]
+      exact hb'
+    exact ⟨hbB, ⟨a, haA, hpair⟩⟩
