@@ -316,27 +316,40 @@ theorem mem_inverse_relation (R A B x : ZFSet) : x ∈ inverse_relation R A B �
   constructor -- 將 ↔ 分成兩個方向
   · intro h -- h : x ∈ inverse_relation R A B
     exact h.2 -- 直接使用 h.2
-  · intro h_exist
+  · intro h_exist -- h_exist : ∃ a ∈ A, ∃ b ∈ B, ordered_pair b a ∈ R ∧ x = ordered_pair b a
     rcases h_exist with ⟨a, haA, b, hbB, hpair, h_eq⟩ -- 分解存在量詞，得到 a ∈ A, b ∈ B, hpair : ordered_pair b a ∈ R, x = ordered_pair b a
-    have hprod : x ∈ product B A := by
-      rw [mem_product]
-      exact ⟨b, hbB, a, haA, h_eq⟩
-    exact ⟨hprod, ⟨a, haA, b, hbB, hpair, h_eq⟩⟩
+    constructor -- 需要證明兩個條件：1) x ∈ product B A, 2) ∃ a ∈ A, ∃ b ∈ B, ordered_pair b a ∈ R ∧ x = ordered_pair b a
+    · rw [mem_product] -- 展開 mem_product，目標變成 ∃ b' ∈ B, ∃ a' ∈ A, x = ordered_pair b' a'
+      exact ⟨b, hbB, a, haA, h_eq⟩ -- 使用 b, hbB, a, haA, h_eq 構造對：b ∈ B, a ∈ A, x = ordered_pair b a
+    · exact ⟨a, haA, b, hbB, hpair, h_eq⟩ -- 第二個條件直接使用 h_exist
 
 
 
 
 -- Theorem 2.2.4 (a)：Dom(R⁻¹) = Rng(R)
-theorem dom_inv_eq_rng (R A B : ZFSet) (hR : is_relation R A B) : domain (inverse_relation R A B) B A = range R A B := by
-  apply ZFSet.ext
+theorem dom_inv_eq_rng (R A B : ZFSet) : domain (inverse_relation R A B) B A = range R A B := by
+  apply ZFSet.ext -- 使用外延性公理，將 domain (inverse_relation R A B) B A = range R A B 轉換為 ∀ y, y ∈ domain (inverse_relation R A B) B A ↔ y ∈ range R A B
   intro y
-  constructor
+  constructor -- 將 ↔ 分成兩個方向
   · intro h_dom
-    rw [domain, ZFSet.mem_sep] at h_dom
-    rcases h_dom with ⟨y_in_B, h_exist⟩
-    rcases h_exist with ⟨a, haA, hpair⟩
-    rw [mem_inverse_relation] at hpair
-    rw [range, ZFSet.mem_sep]
-    rw [is_relation] at hR
-    rcases hpair with ⟨b, hbB, a, haA, hpair, h_eq⟩
-    have y_eq_b : y = a := ordered_pair_eq_left h_eq
+    rw [domain, ZFSet.mem_sep] at h_dom -- 展開 domain 的定義：domain (inverse_relation R A B) B A = ZFSet.sep (fun a => ∃ b ∈ A, ordered_pair b a ∈ inverse_relation R A B) (B)
+    rcases h_dom with ⟨y_in_B, h_exist⟩ -- 分解存在量詞，得到 y ∈ B, h_exist : ∃ a ∈ A, ordered_pair y a ∈ inverse_relation R A B
+    rcases h_exist with ⟨a, haA, hpair⟩ -- 分解存在量詞，得到 a ∈ A, hpair : ordered_pair y a ∈ inverse_relation R A B
+    rw [mem_inverse_relation] at hpair -- 展開 mem_inverse_relation 的定義：mem_inverse_relation R A B x = ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair b a
+    rw [range, ZFSet.mem_sep] -- 展開 range 的定義：range R A B = ZFSet.sep (fun b => ∃ a ∈ A, ordered_pair a b ∈ R) (A)
+    rcases hpair with ⟨a_1, ha1A, b, hbB, hpair, h_eq⟩ -- 分解存在量詞，得到 a_1 ∈ A, ha1A : ordered_pair a_1 b ∈ R, b ∈ B, hbB : ordered_pair a_1 b ∈ R, hpair : ordered_pair a_1 b ∈ R, h_eq : x = ordered_pair b a_1
+    have y_eq_b : y = b := ordered_pair_eq_left h_eq -- 使用有序對左分量唯一性引理
+    rw [← y_eq_b] at hpair -- 將 y = b 替換為 ordered_pair y b ∈ R
+    exact ⟨y_in_B, ⟨a_1, ha1A, hpair⟩⟩ -- 構造對：第一個分量是 y ∈ B，第二個分量是存在性證明
+  · intro h_rng -- h_rng : y ∈ range R A B
+    rw [range, ZFSet.mem_sep] at h_rng -- 展開 range 的定義：range R A B = ZFSet.sep (fun b => ∃ a ∈ A, ordered_pair a b ∈ R) (B)
+    rcases h_rng with ⟨y_in_B, h_exist⟩ -- 分解存在量詞，得到 y ∈ B, h_exist : ∃ a ∈ A, ordered_pair y a ∈ inverse_relation R A B
+    rcases h_exist with ⟨a, haA, hpair⟩ -- 分解存在量詞，得到 a ∈ A, hpair : ordered_pair y a ∈ inverse_relation R A B
+    rw [domain, ZFSet.mem_sep] -- 展開 domain 的定義：domain (inverse_relation R A B) B A = ZFSet.sep (fun a => ∃ b ∈ A, ordered_pair b a ∈ inverse_relation R A B) (B)
+    constructor -- 將 ↔ 分成兩個方向
+    · exact y_in_B
+    · exists a -- 存在性證明
+      constructor -- 需要證明兩個條件：1) a ∈ A, 2) ordered_pair y a ∈ inverse_relation R A B
+      · exact haA -- 第一個條件直接使用 haA : a ∈ A
+      · rw [mem_inverse_relation] -- 展開 mem_inverse_relation 的定義：mem_inverse_relation R A B x = ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair b a
+        exact ⟨a, haA, y, y_in_B, hpair, rfl⟩ -- 第二個條件直接使用 hpair : ordered_pair y a ∈ inverse_relation R A B
