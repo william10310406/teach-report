@@ -310,8 +310,7 @@ def inverse_relation (R A B : ZFSet) : ZFSet :=
   ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair b a)
             (product B A)
 
-theorem mem_inverse_relation (R A B x : ZFSet) :
-  x ∈ inverse_relation R A B ↔ ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair b a := by
+theorem mem_inverse_relation (R A B x : ZFSet) : x ∈ inverse_relation R A B ↔ ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair b a := by
   rw [inverse_relation] -- 展開 inverse_relation 的定義：inverse_relation R A B = ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ B, ordered_pair b a ∈ R ∧ x = ordered_pair b a) (product B A)
   rw [ZFSet.mem_sep] -- 使用分離公設的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
   constructor -- 將 ↔ 分成兩個方向
@@ -323,3 +322,21 @@ theorem mem_inverse_relation (R A B x : ZFSet) :
       rw [mem_product]
       exact ⟨b, hbB, a, haA, h_eq⟩
     exact ⟨hprod, ⟨a, haA, b, hbB, hpair, h_eq⟩⟩
+
+
+
+
+-- Theorem 2.2.4 (a)：Dom(R⁻¹) = Rng(R)
+theorem dom_inv_eq_rng (R A B : ZFSet) (hR : is_relation R A B) : domain (inverse_relation R A B) B A = range R A B := by
+  apply ZFSet.ext
+  intro y
+  constructor
+  · intro h_dom
+    rw [domain, ZFSet.mem_sep] at h_dom
+    rcases h_dom with ⟨y_in_B, h_exist⟩
+    rcases h_exist with ⟨a, haA, hpair⟩
+    rw [mem_inverse_relation] at hpair
+    rw [range, ZFSet.mem_sep]
+    rw [is_relation] at hR
+    rcases hpair with ⟨b, hbB, a, haA, hpair, h_eq⟩
+    have y_eq_b : y = a := ordered_pair_eq_left h_eq
