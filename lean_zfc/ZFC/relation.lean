@@ -385,7 +385,7 @@ theorem rng_inv_eq_dom (R A B : ZFSet) : range (inverse_relation R A B) B A = do
 
 
 
---
+-- Definition：組合關係 (Composition Relation) 定義
 def composition_relation (R S A C B : ZFSet) : ZFSet :=
   ZFSet.sep (fun x => ∃ a ∈ A, ∃ c ∈ C, x = ordered_pair a c ∧ ∃ b ∈ B, ordered_pair a b ∈ R ∧ ordered_pair b c ∈ S) (product A C)
 
@@ -401,3 +401,34 @@ theorem mem_composition_relation (R S A B C x : ZFSet) : x ∈ composition_relat
     · rw [mem_product] -- 展開 mem_product，目標變成 ∃ a' ∈ A, ∃ c' ∈ C, x = ordered_pair a' c'
       exact ⟨a, haA, c, hcC, h_eq⟩ -- 使用 a, haA, c, hcC, h_eq 構造對：a ∈ A, c ∈ C, x = ordered_pair a c
     · exact ⟨a, haA, c, hcC, h_eq, b, hbB, hpair1, hpair2⟩ -- 第二個條件直接使用 h_exist
+
+
+
+
+-- Theorem 3.1.2 (a)：(R⁻¹)⁻¹ = R
+theorem R_inv_inv_eq_R (R A B : ZFSet) (hR : is_relation R A B): inverse_relation (inverse_relation R A B) B A = R := by
+  apply ZFSet.ext -- 使用外延性公理，將 inverse_relation (inverse_relation R A B) B A = R 轉換為 ∀ y, y ∈ inverse_relation (inverse_relation R A B) B A ↔ y ∈ R
+  intro x
+  constructor
+  · intro h_inv_inv
+    rw [mem_inverse_relation] at h_inv_inv -- 展開 inverse_relation 的定義：inverse_relation R A B = ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair b a) (product B A)
+    rcases h_inv_inv with ⟨b, hbB, a, haA, hpair_in_inv, x_eq⟩
+    rw [mem_inverse_relation] at hpair_in_inv -- 展開 mem_inverse_relation 的定義：mem_inverse_relation R A B x = ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair b a
+    rcases hpair_in_inv with ⟨a1, ha1A, b1, hb1B, hpair1, x_eq1⟩ -- 分解存在量詞，得到 a1 ∈ A, b1 ∈ B, hpair1 : ordered_pair a1 b1 ∈ R, x_eq1 : x = ordered_pair b1 a1
+    have b_eq_b1 : b = b1 := ordered_pair_eq_left x_eq1 -- 使用有序對左分量唯一性引理
+    have a_eq_a1 : a = a1 := ordered_pair_eq_right x_eq1 -- 使用有序對右分量唯一性引理
+    rw [a_eq_a1, b_eq_b1] at x_eq
+    rw [← x_eq] at hpair1
+    exact hpair1
+  · intro h_R
+    rw [mem_inverse_relation]
+    rw [is_relation] at hR -- 展開 is_relation 的定義：is_relation R A B = ∀ x ∈ R, x ∈ product A B
+    have x_in_product : x ∈ product A B := hR x h_R
+    rw [mem_product] at x_in_product
+    rcases x_in_product with ⟨a, haA, b, hbB, x_eq⟩
+    exists b, hbB, a, haA
+    constructor
+    · rw [mem_inverse_relation]
+      rw [x_eq] at h_R
+      exact ⟨a, haA, b, hbB, h_R, rfl⟩
+    · exact x_eq
