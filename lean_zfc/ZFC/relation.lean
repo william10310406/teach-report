@@ -178,8 +178,8 @@ theorem mem_product (A B x : ZFSet) : x ∈ product A B ↔ ∃ a ∈ A, ∃ b �
 -- 定義：從集合 A 到集合 B 的二元關係 R 是 A × B 的子集
 -- 即：R ⊆ A × B
 -- 這意味著 R 中的每個元素都是形如 (a, b) 的有序對，其中 a ∈ A, b ∈ B
-def is_relation (R A B : ZFSet) : Prop :=
-  ∀ x ∈ R, x ∈ product A B
+def is_relation (R : ZFSet) : Prop :=
+  ∀ x ∈ R, ∃ a b, x = ordered_pair a b
 
 -- def is_relation (R A B : ZFSet) : ZFSet :=
 --   ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair a b)
@@ -422,36 +422,36 @@ theorem mem_composition_relation (S R x : ZFSet) : x ∈ S ∘ R ↔ ∃ a b c, 
         · rw [mem_range]
           exact ⟨b, hpair2⟩
         · exact h_eq
+    · exact ⟨a, b, c, h_eq, hpair1, hpair2⟩
 
 
 
 -- Theorem 3.1.2 (a)：(R⁻¹)⁻¹ = R
-theorem R_inv_inv_eq_R (R A B : ZFSet) (hR : is_relation R A B): inverse_relation (inverse_relation R A B) B A = R := by
-  apply ZFSet.ext -- 使用外延性公理，將 inverse_relation (inverse_relation R A B) B A = R 轉換為 ∀ y, y ∈ inverse_relation (inverse_relation R A B) B A ↔ y ∈ R
-  intro x
-  constructor
-  · intro h_inv_inv
-    rw [mem_inverse_relation] at h_inv_inv -- 展開 inverse_relation 的定義：inverse_relation R A B = ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair b a) (product B A)
-    rcases h_inv_inv with ⟨b, hbB, a, haA, hpair_in_inv, x_eq⟩
-    rw [mem_inverse_relation] at hpair_in_inv -- 展開 mem_inverse_relation 的定義：mem_inverse_relation R A B x = ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair b a
-    rcases hpair_in_inv with ⟨a1, ha1A, b1, hb1B, hpair1, x_eq1⟩ -- 分解存在量詞，得到 a1 ∈ A, b1 ∈ B, hpair1 : ordered_pair a1 b1 ∈ R, x_eq1 : x = ordered_pair b1 a1
-    have b_eq_b1 : b = b1 := ordered_pair_eq_left x_eq1 -- 使用有序對左分量唯一性引理
-    have a_eq_a1 : a = a1 := ordered_pair_eq_right x_eq1 -- 使用有序對右分量唯一性引理
-    rw [a_eq_a1, b_eq_b1] at x_eq
-    rw [← x_eq] at hpair1
-    exact hpair1
-  · intro h_R
-    rw [mem_inverse_relation]
-    rw [is_relation] at hR -- 展開 is_relation 的定義：is_relation R A B = ∀ x ∈ R, x ∈ product A B
-    have x_in_product : x ∈ product A B := hR x h_R
-    rw [mem_product] at x_in_product
-    rcases x_in_product with ⟨a, haA, b, hbB, x_eq⟩
-    exists b, hbB, a, haA
+  theorem R_inv_inv_eq_R (R : ZFSet)(hR : is_relation R) : (R⁻¹)⁻¹ = R := by
+    apply ZFSet.ext
+    intro x
     constructor
-    · rw [mem_inverse_relation]
-      rw [x_eq] at h_R
-      exact ⟨a, haA, b, hbB, h_R, rfl⟩
-    · exact x_eq
+    · intro h_inv_inv
+      rw [mem_inverse_relation] at h_inv_inv
+      rcases h_inv_inv with ⟨a, b, hpair, h_eq⟩
+      rw [mem_inverse_relation] at hpair
+      rcases hpair with ⟨b1, a1, hpair1, hpair2⟩
+      have a_eq_a1 : a = a1 := ordered_pair_eq_left hpair2
+      have b_eq_b1 : b = b1 := ordered_pair_eq_right hpair2
+      subst a_eq_a1 b_eq_b1 h_eq
+      exact hpair1
+    · intro h_R
+      rw [mem_inverse_relation]
+      rw [is_relation] at hR
+      rcases hR x h_R with ⟨a, b, h_eq⟩
+      exists b, a
+      constructor
+      · rw [mem_inverse_relation]
+        exists a, b
+        subst h_eq
+        exact ⟨h_R, rfl⟩
+      · exact h_eq
+
 
 -- Theorem 3.1.2 (b)：T∘(S∘R) = (T∘S)∘R
 -- theorem Comp_Associative_Law (T S R A B C D: ZFSet):
