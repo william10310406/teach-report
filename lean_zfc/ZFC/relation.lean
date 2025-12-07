@@ -382,3 +382,22 @@ theorem rng_inv_eq_dom (R A B : ZFSet) : range (inverse_relation R A B) B A = do
       · exact hbB
       · rw [mem_inverse_relation] -- 展開 mem_inverse_relation 的定義：mem_inverse_relation R A B x = ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair b a
         exact ⟨x, x_in_A, b, hbB, hpair, rfl⟩ -- 第二個條件直接使用 hpair : ordered_pair b x ∈ inverse_relation R A B
+
+
+
+--
+def composition_relation (R S A C B : ZFSet) : ZFSet :=
+  ZFSet.sep (fun x => ∃ a ∈ A, ∃ c ∈ C, x = ordered_pair a c ∧ ∃ b ∈ B, ordered_pair a b ∈ R ∧ ordered_pair b c ∈ S) (product A C)
+
+theorem mem_composition_relation (R S A B C x : ZFSet) : x ∈ composition_relation R S A C B ↔ ∃ a ∈ A, ∃ c ∈ C, x = ordered_pair a c ∧ ∃ b ∈ B, ordered_pair a b ∈ R ∧ ordered_pair b c ∈ S := by
+  rw [composition_relation] -- 展開 composition_relation 的定義：composition_relation R S A C B = ZFSet.sep (fun x => ∃ a ∈ A, ∃ c ∈ C, x = ordered_pair a c ∧ ∃ b ∈ B, ordered_pair a b ∈ R ∧ ordered_pair b c ∈ S) (product A C)
+  rw [ZFSet.mem_sep] -- 使用分離公設的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
+  constructor -- 將 ↔ 分成兩個方向
+  · intro h -- h : x ∈ composition_relation R S A C B
+    exact h.2 -- 直接使用 h.2
+  · intro h_exist -- h_exist : ∃ a ∈ A, ∃ c ∈ C, x = ordered_pair a c ∧ ∃ b ∈ B, ordered_pair a b ∈ R ∧ ordered_pair b c ∈ S
+    rcases h_exist with ⟨a, haA, c, hcC, h_eq, b, hbB, hpair1, hpair2⟩ -- 分解存在量詞，得到 a ∈ A, c ∈ C, x = ordered_pair a c, b ∈ B, hpair1 : ordered_pair a b ∈ R, hpair2 : ordered_pair b c ∈ S
+    constructor -- 需要證明兩個條件：1) x ∈ product A C, 2) ∃ a ∈ A, ∃ c ∈ C, x = ordered_pair a c ∧ ∃ b ∈ B, ordered_pair a b ∈ R ∧ ordered_pair b c ∈ S
+    · rw [mem_product] -- 展開 mem_product，目標變成 ∃ a' ∈ A, ∃ c' ∈ C, x = ordered_pair a' c'
+      exact ⟨a, haA, c, hcC, h_eq⟩ -- 使用 a, haA, c, hcC, h_eq 構造對：a ∈ A, c ∈ C, x = ordered_pair a c
+    · exact ⟨a, haA, c, hcC, h_eq, b, hbB, hpair1, hpair2⟩ -- 第二個條件直接使用 h_exist
