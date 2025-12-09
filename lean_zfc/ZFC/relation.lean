@@ -178,8 +178,8 @@ theorem mem_product (A B x : ZFSet) : x ∈ product A B ↔ ∃ a ∈ A, ∃ b �
 -- 定義：從集合 A 到集合 B 的二元關係 R 是 A × B 的子集
 -- 即：R ⊆ A × B
 -- 這意味著 R 中的每個元素都是形如 (a, b) 的有序對，其中 a ∈ A, b ∈ B
-def is_relation (R : ZFSet) : Prop :=
-  ∀ x ∈ R, ∃ a b, x = ordered_pair a b
+def is_relation (R A B : ZFSet) : Prop :=
+  ∀ x ∈ R, ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b
 
 -- def is_relation (R A B : ZFSet) : ZFSet :=
 --   ZFSet.sep (fun x => ∃ a ∈ A, ∃ b ∈ B, ordered_pair a b ∈ R ∧ x = ordered_pair a b)
@@ -427,7 +427,7 @@ theorem mem_composition_relation (S R x : ZFSet) : x ∈ S ∘ R ↔ ∃ a b c, 
 
 
 -- Theorem 3.1.2 (a)：(R⁻¹)⁻¹ = R
-  theorem R_inv_inv_eq_R (R : ZFSet)(hR : is_relation R) : (R⁻¹)⁻¹ = R := by
+  theorem R_inv_inv_eq_R (R A B : ZFSet)(hR : is_relation R A B) : (R⁻¹)⁻¹ = R := by
     apply ZFSet.ext
     intro x
     constructor
@@ -443,75 +443,86 @@ theorem mem_composition_relation (S R x : ZFSet) : x ∈ S ∘ R ↔ ∃ a b c, 
     · intro h_R
       rw [mem_inverse_relation]
       rw [is_relation] at hR
-      rcases hR x h_R with ⟨a, b, h_eq⟩
+      have h_exists : ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b := hR x h_R
+      rcases h_exists with ⟨a, ha, b, hb, h_eq⟩
       exists b, a
       constructor
       · rw [mem_inverse_relation]
         exists a, b
-        subst h_eq
-        exact ⟨h_R, rfl⟩
+        constructor
+        · subst h_eq
+          exact h_R
+        · rfl
       · exact h_eq
 
 
--- Theorem 3.1.2 (b)：T∘(S∘R) = (T∘S)∘R
--- theorem Comp_Associative_Law (T S R A B C D: ZFSet):
---   composition_relation T (composition_relation S R A C B) A D C = composition_relation (composition_relation T S B D C) R A D B := by
---   apply ZFSet.ext -- 使用外延性公理，將 composition_relation T (composition_relation S R A C B) A D C = composition_relation (composition_relation T S B D C) R A D B 轉換為 ∀ y, y ∈ composition_relation T (composition_relation S R A C B) A D C ↔ y ∈ composition_relation (composition_relation T S B D C) R A D B
---   intro x
---   constructor
---   · intro hl_comp
---     rw [mem_composition_relation] at hl_comp -- 展開 composition_relation 的定義：composition_relation R S A C B = ZFSet.sep (fun x => ∃ a ∈ A, ∃ c ∈ C, x = ordered_pair a c ∧ ∃ b ∈ B, ordered_pair a b ∈ R ∧ ordered_pair b c ∈ S) (product A C)
---     rcases hl_comp with ⟨a, haA, d, hdD, x_eq_pair_ad, c, hcC, hpair_ac, hpair_cd⟩ -- 分解存在量詞，得到 a ∈ A, d ∈ D, x = ordered_pair a d, b ∈ B, hpair1 : ordered_pair a b ∈ R, hpair2 : ordered_pair b c ∈ S
---     rw [mem_composition_relation]
---     exists a, haA, d, hdD
---     constructor
---     · exact x_eq_pair_ad
---     · rw [mem_composition_relation] at hpair_ac
---       rcases hpair_ac with ⟨a1, ha1A, c1, hc1C, hpair_ac_a1c1, b_exists⟩ -- 分解存在量詞，得到 a1 ∈ A, c1 ∈ C, x = ordered_pair a1 c1, b ∈ B, hpair_ac_a1c1 : ordered_pair a1 b ∈ R, b_exists : ∃ b ∈ B, ordered_pair a1 b ∈ R ∧ ordered_pair b c1 ∈ S
---       rcases b_exists with ⟨b, hbB, hpair_ab, hpair_bc1⟩ -- 分解存在量詞，得到 b ∈ B, hpair_ab : ordered_pair a1 b ∈ R, hpair_bc1 : ordered_pair b c1 ∈ S
---       exists b, hbB
---       constructor
---       · have a_eq_a1 : a = a1 := ordered_pair_eq_left hpair_ac_a1c1
---         subst a_eq_a1
---         exact hpair_ab
---       · rw [mem_composition_relation]
---         exists b, hbB, d, hdD
---         constructor
---         · exact rfl
---         · exists c, hcC
---           have c_eq_c1 : c = c1 := ordered_pair_eq_right hpair_ac_a1c1
---           subst c_eq_c1
---           exact ⟨hpair_bc1, hpair_cd⟩
---   · intro hr_comp
---     rw [mem_composition_relation] at hr_comp -- 展開 composition_relation 的定義：composition_relation R S A C B = ZFSet.sep (fun x => ∃ a ∈ A, ∃ c ∈ C, x = ordered_pair a c ∧ ∃ b ∈ B, ordered_pair a b ∈ R ∧ ordered_pair b c ∈ S) (product A C)
---     rcases hr_comp with ⟨a, haA, d, hdD, x_eq_pair_ad, b, hbB, hpair_ab, hpair_bd⟩ -- 分解存在量詞，得到 a ∈ A, d ∈ D, x = ordered_pair a d, b ∈ B, hpair_ab : ordered_pair a b ∈ R, hpair_bd : ordered_pair b d ∈ S
---     rw [mem_composition_relation]
---     exists a, haA, d, hdD
---     constructor
---     · exact x_eq_pair_ad
---     · rw [mem_composition_relation] at hpair_bd
---       rcases hpair_bd with ⟨b1, hb1B, d1, hd1D, hpair_bd_b1d1, c_exists⟩ -- 分解存在量詞，得到 b1 ∈ B, d1 ∈ D, x = ordered_pair b1 d1, c ∈ C, hpair_bd_b1d1 : ordered_pair b1 c ∈ S, c_exists : ∃ c ∈ C, ordered_pair b1 c ∈ S ∧ ordered_pair c d1 ∈ T
---       rcases c_exists with ⟨c, hcC, hpair_b1c1, hpair_c1d1⟩ -- 分解存在量詞，得到 c1 ∈ C, hpair_b1c1 : ordered_pair b1 c1 ∈ S, hpair_c1d1 : ordered_pair c1 d1 ∈ T
---       exists c, hcC
---       constructor
---       · rw [mem_composition_relation]
---         exists a, haA, c, hcC
---         constructor
---         · exact rfl
---         · exists b, hbB
---           have b_eq_b1 : b = b1 := ordered_pair_eq_left hpair_bd_b1d1
---           subst b_eq_b1
---           exact ⟨hpair_ab, hpair_b1c1⟩
---       · have d_eq_d1 : d = d1 := ordered_pair_eq_right hpair_bd_b1d1
---         subst d_eq_d1
---         exact hpair_c1d1
+
 
 -- Theorem 3.1.2 (b)：T∘(S∘R) = (T∘S)∘R
-theorem Comp_Associative_Law (T S R A B C D: ZFSet):
-  composition_relation T (composition_relation S R A C B) A D C = composition_relation (composition_relation T S B D C) R A D B := by
-  have h_pair : ∀ (a d : ZFSet),
-    ordered_pair a d ∈ composition_relation T (composition_relation S R A C B) A D C ↔ ordered_pair a d ∈ composition_relation (composition_relation T S B D C) R A D B := by
-    intro a d
-    calc
-      ordered_pair a d ∈ composition_relation T (composition_relation S R A C B) A D C
-      ↔ ∃ a ∈ A, ∃ d ∈ D, ordered_pair a d ∈ composition_relation T (composition_relation S R A C B) A D C
+theorem Comp_Associative_Law (T S R: ZFSet):
+  composition_relation T (composition_relation S R) = composition_relation (composition_relation T S) R := by
+  apply ZFSet.ext -- 使用外延性公理，將 composition_relation T (composition_relation S R A C B) A D C = composition_relation (composition_relation T S B D C) R A D B 轉換為 ∀ y, y ∈ composition_relation T (composition_relation S R A C B) A D C ↔ y ∈ composition_relation (composition_relation T S B D C) R A D B
+  intro x
+  constructor
+  · intro hl_comp
+    rw [mem_composition_relation] at hl_comp -- 展開 composition_relation 的定義：composition_relation R S A C B = ZFSet.sep (fun x => ∃ a ∈ A, ∃ c ∈ C, x = ordered_pair a c ∧ ∃ b ∈ B, ordered_pair a b ∈ R ∧ ordered_pair b c ∈ S) (product A C)
+    rcases hl_comp with ⟨a, c, d, h_eq, hpair1, hpair2⟩
+    rw [mem_composition_relation] at hpair1
+    rcases hpair1 with ⟨a1, b, c1, h_eq1, hpair11, hpair12⟩
+    rw [mem_composition_relation]
+    exists a, b, d
+    constructor
+    · exact h_eq
+    · constructor
+      · have a_eq_a1 : a = a1 := ordered_pair_eq_left h_eq1
+        subst a_eq_a1
+        exact hpair11
+      · rw [mem_composition_relation]
+        exists b, c, d
+        constructor
+        · rfl
+        · have c_eq_c1 : c = c1 := ordered_pair_eq_right h_eq1
+          subst c_eq_c1
+          exact ⟨hpair12, hpair2⟩
+  · intro hr_comp
+    rw [mem_composition_relation] at hr_comp
+    rcases hr_comp with ⟨a, b, d, h_eq, hpair1, hpair2⟩
+    rw [mem_composition_relation] at hpair2
+    rcases hpair2 with ⟨b1, c, d1, h_eq1, hpair21, hpair22⟩
+    rw [mem_composition_relation]
+    exists a, c, d
+    constructor
+    · exact h_eq
+    · constructor
+      · rw [mem_composition_relation]
+        exists a, b, c
+        constructor
+        · rfl
+        · have b_eq_b1 : b = b1 := ordered_pair_eq_left h_eq1
+          subst b_eq_b1
+          exact ⟨hpair1, hpair21⟩
+      · have d_eq_d1 : d = d1 := ordered_pair_eq_right h_eq1
+        subst d_eq_d1
+        exact hpair22
+
+
+-- Theorem 3.1.2 (c)： I_B ∘ R = R ∘ I_A
+theorem IB_Comp_R_eq_R_Comp_IA (B A R: ZFSet)(hR: is_relation R A B): identity_relation B ∘ R = R ∘ identity_relation A := by
+  apply ZFSet.ext
+  intro x
+  constructor
+  · intro h_IB_Comp_R
+    rw [mem_composition_relation] at h_IB_Comp_R
+    rcases h_IB_Comp_R with ⟨a, b, b1, h_eq, hpair1, hpair2⟩
+    rw [mem_composition_relation]
+    exists a, b, b1
+    constructor
+    · exact h_eq
+    · constructor
+      · rw [mem_identity_relation]
+        rw [is_relation] at hR
+        have h_exists : ∃ a_1 ∈ A, ∃ b_1 ∈ B, ordered_pair a_1 b_1 = ordered_pair a b := hR a b hpair1
+        rcases h_exists with ⟨a1, ha1, b1, hb1, h_eq1⟩
+        exists a
+        have a1_eq_a : a1 = a := ordered_pair_eq_left h_eq1
+        subst
