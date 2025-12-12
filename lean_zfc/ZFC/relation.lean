@@ -728,3 +728,20 @@ theorem inv_comp_eq_inv_comp_inv (S R : ZFSet) : (S ∘ R)⁻¹ = R⁻¹ ∘ S�
     -- 證明 (a, c) ∈ S ∘ R
     rw [mem_composition_relation]
     refine ⟨a, b, c, rfl, h_ab, h_bc⟩
+
+
+
+
+
+--Chapter 3.2: Equivalence Relations
+def is_reflexive (R A : ZFSet) : Prop :=
+  identity_relation A ⊆ R
+
+def is_symmetric (R : ZFSet) : Prop :=
+  inverse_relation R ⊆ R
+
+def is_transitive (R : ZFSet) : Prop :=
+  R ∘ R ⊆ R
+
+def is_equivalence (R A : ZFSet) : Prop :=
+  is_reflexive R A ∧ is_symmetric R ∧ is_transitive R
