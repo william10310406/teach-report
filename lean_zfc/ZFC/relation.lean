@@ -281,18 +281,24 @@ def domain (R : ZFSet) : ZFSet :=
 
 -- 定理：a 屬於關係 R 的定義域當且僅當存在 b ∈ B 使得 (a, b) ∈ R
 -- 這是定義域定義的直接刻畫
-theorem mem_domain (R : ZFSet) : a ∈ domain R ↔ ∃ b , ordered_pair a b ∈ R := by
+-- 定理：a 屬於關係 R 的定義域當且僅當存在 b 使得 (a, b) ∈ R
+-- 這是定義域定義的直接刻畫
+-- 注意：這裡的 a 是隱式參數，需要在定理聲明中明確指定
+theorem mem_domain (R a : ZFSet) : a ∈ domain R ↔ ∃ b , ordered_pair a b ∈ R := by
   rw [domain] -- 展開 domain 的定義：domain R = ZFSet.sep (fun a => ∃ b, ordered_pair a b ∈ R) (ZFSet.sUnion (ZFSet.sUnion (R)))
   rw [ZFSet.mem_sep] -- 使用分離公理的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
   -- 現在目標變成：a ∈ ZFSet.sUnion (ZFSet.sUnion R) ∧ (∃ b, ordered_pair a b ∈ R) ↔ (∃ b, ordered_pair a b ∈ R)
   constructor -- 將 ↔ 分成兩個方向
   · intro h -- 左到右：假設 a ∈ domain R，即 a ∈ ZFSet.sUnion (ZFSet.sUnion R) ∧ (∃ b, ordered_pair a b ∈ R)
-    exact h.2
+    exact h.2 -- 直接取出存在性條件
   · intro h2 -- 右到左：假設存在 b 使得 ordered_pair a b ∈ R
-    rcases h2 with ⟨b, hpair⟩
-    constructor
-    · exact pair_in_union_of_union_left hpair
-    · exists b
+    rcases h2 with ⟨b, hpair⟩ -- 分解存在量詞，得到 b 和 hpair : ordered_pair a b ∈ R
+    constructor -- 需要證明兩個條件：1) a 在雙重並集中，2) 存在性條件
+    · -- 證明 a ∈ ZFSet.sUnion (ZFSet.sUnion R)
+      -- 利用輔助引理：從 (a, b) ∈ R 可以推出 a ∈ ⋃⋃R
+      exact pair_in_union_of_union_left hpair
+    · -- 證明存在性條件：∃ b, ordered_pair a b ∈ R
+      exists b -- 使用剛才分解出的 b
 
 -- ============================================
 -- 關係的值域 (Range) 定義
@@ -305,256 +311,420 @@ def range (R : ZFSet) : ZFSet :=
 
 -- 定理：b 屬於關係 R 的值域當且僅當存在 a ∈ A 使得 (a, b) ∈ R
 -- 這是值域定義的直接刻畫
-theorem mem_range (R : ZFSet) : b ∈ range R ↔ ∃ a, ordered_pair a b ∈ R := by
+-- 定理：b 屬於關係 R 的值域當且僅當存在 a 使得 (a, b) ∈ R
+-- 這是值域定義的直接刻畫
+-- 注意：這裡的 b 是隱式參數，需要在定理聲明中明確指定
+theorem mem_range (R b : ZFSet) : b ∈ range R ↔ ∃ a, ordered_pair a b ∈ R := by
   rw [range] -- 展開 range 的定義：range R = ZFSet.sep (fun b => ∃ a, ordered_pair a b ∈ R) (ZFSet.sUnion (ZFSet.sUnion (R)))
   rw [ZFSet.mem_sep] -- 使用分離公理的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
   -- 現在目標變成：b ∈ ZFSet.sUnion (ZFSet.sUnion R) ∧ (∃ a, ordered_pair a b ∈ R) ↔ (∃ a, ordered_pair a b ∈ R)
-  constructor
+  constructor -- 將 ↔ 分成兩個方向
   · intro h -- 左到右：假設 b ∈ range R，即 b ∈ ZFSet.sUnion (ZFSet.sUnion R) ∧ (∃ a, ordered_pair a b ∈ R)
-    exact h.2
+    exact h.2 -- 直接取出存在性條件
   · intro h2 -- 右到左：假設存在 a 使得 ordered_pair a b ∈ R
-    rcases h2 with ⟨a, hpair⟩
-    constructor
-    · exact pair_in_union_of_union_right hpair
-    · exists a
+    rcases h2 with ⟨a, hpair⟩ -- 分解存在量詞，得到 a 和 hpair : ordered_pair a b ∈ R
+    constructor -- 需要證明兩個條件：1) b 在雙重並集中，2) 存在性條件
+    · -- 證明 b ∈ ZFSet.sUnion (ZFSet.sUnion R)
+      -- 利用輔助引理：從 (a, b) ∈ R 可以推出 b ∈ ⋃⋃R
+      exact pair_in_union_of_union_right hpair
+    · -- 證明存在性條件：∃ a, ordered_pair a b ∈ R
+      exists a -- 使用剛才分解出的 a
 
 
+-- ============================================
+-- 反關係 (Inverse Relation) 定義
+-- ============================================
+-- 定義：關係 R 的反關係 R⁻¹ 是將 R 中所有有序對的兩個分量交換得到的關係
+-- 即：R⁻¹ = {(b, a) | (a, b) ∈ R}
+-- 數學意義：如果 R 是從 A 到 B 的關係，則 R⁻¹ 是從 B 到 A 的關係
+-- 在函數的語言中，反關係對應於反函數（如果存在）
 def inverse_relation (R : ZFSet) : ZFSet :=
   ZFSet.sep (fun x => ∃ a, ∃ b, ordered_pair a b ∈ R ∧ x = ordered_pair b a)
             (product (range R) (domain R))
 postfix:max "⁻¹" => inverse_relation -- 定義 ⁻¹ 為 inverse_relation 的簡寫
 
-
+-- 定理：x 屬於反關係 R⁻¹ 當且僅當存在 a, b 使得 (a, b) ∈ R 且 x = (b, a)
+-- 這是反關係定義的直接刻畫
 theorem mem_inverse_relation (R x : ZFSet) : x ∈ R⁻¹ ↔ ∃ a, ∃ b, ordered_pair a b ∈ R ∧ x = ordered_pair b a := by
-  rw [inverse_relation]
-  rw [ZFSet.mem_sep]
-  constructor
-  · intro h
-    exact h.2
-  · intro h_exist
-    rcases h_exist with ⟨a, b, hpair, h_eq⟩
-    constructor
-    · rw [h_eq]
-      rw [mem_product]
-      exists b
+  rw [inverse_relation] -- 展開 inverse_relation 的定義
+  rw [ZFSet.mem_sep] -- 使用分離公理的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
+  constructor -- 將 ↔ 分成兩個方向
+  · intro h -- 左到右：假設 x 在分離集合中
+    exact h.2 -- 直接取出存在性條件
+  · intro h_exist -- 右到左：假設存在 a, b 使得 (a, b) ∈ R 且 x = (b, a)
+    rcases h_exist with ⟨a, b, hpair, h_eq⟩ -- 分解存在量詞
+    constructor -- 需要證明兩個條件：1) x 在笛卡爾積中，2) 存在性條件
+    · -- 證明 x ∈ product (range R) (domain R)
+      -- 即證明 (b, a) ∈ (range R) × (domain R)
+      rw [h_eq] -- 將 x 替換為 ordered_pair b a
+      rw [mem_product] -- 展開笛卡爾積的成員關係
+      exists b -- 第一個分量是 b
       constructor
-      · rw [mem_range]
-        exact ⟨a, hpair⟩
-      · exists a
+      · -- 證明 b ∈ range R，即存在 a' 使得 (a', b) ∈ R
+        rw [mem_range]
+        exact ⟨a, hpair⟩ -- 使用 a 作為證人
+      · exists a -- 第二個分量是 a
         constructor
-        · rw [mem_domain]
-          exact ⟨b, hpair⟩
-        · rfl
-    · exact ⟨a, b, hpair, h_eq⟩
+        · -- 證明 a ∈ domain R，即存在 b' 使得 (a, b') ∈ R
+          rw [mem_domain]
+          exact ⟨b, hpair⟩ -- 使用 b 作為證人
+        · rfl -- ordered_pair b a = ordered_pair b a
+    · -- 證明存在性條件
+      exact ⟨a, b, hpair, h_eq⟩
 
 
 
 
--- Theorem 2.2.4 (a)：Dom(R⁻¹) = Rng(R)
+-- ============================================
+-- 反關係的性質定理
+-- ============================================
+-- Theorem 2.2.4 (a)：反關係的定義域等於原關係的值域
+-- 即：Dom(R⁻¹) = Rng(R)
+-- 數學意義：如果 (a, b) ∈ R，則 b 在 R 的值域中，同時 b 在 R⁻¹ 的定義域中
 theorem dom_inv_eq_rng (R : ZFSet) : domain (inverse_relation R) = range R := by
-  apply ZFSet.ext
-  intro b
-  constructor
-  · intro h_dom
-    rw [mem_domain] at h_dom
-    rcases h_dom with ⟨a, hpair⟩
-    rw [mem_inverse_relation] at hpair
-    rcases hpair with ⟨a1, b1, hpair1, hpair2⟩
-    have b_eq_b1 : b = b1 := ordered_pair_eq_left hpair2
-    have a_eq_a1 : a = a1 := ordered_pair_eq_right hpair2
-    subst b_eq_b1 a_eq_a1
-    rw [mem_range]
-    exact ⟨a, hpair1⟩
-  · intro h_rng
-    rw [mem_range] at h_rng
-    rcases h_rng with ⟨a, hpair⟩
-    rw [mem_domain]
-    exists a
-    rw [mem_inverse_relation]
-    exact ⟨a, b, hpair, rfl⟩
+  apply ZFSet.ext -- 使用外延性公理，證明兩個集合相等
+  intro b -- 對任意元素 b
+  constructor -- 將 ↔ 分成兩個方向
+  · -- 方向1：如果 b ∈ domain (R⁻¹)，則 b ∈ range R
+    intro h_dom -- 假設 b ∈ domain (R⁻¹)
+    rw [mem_domain] at h_dom -- 展開定義域的刻畫
+    rcases h_dom with ⟨a, hpair⟩ -- 得到存在 a 使得 (a, b) ∈ R⁻¹
+    rw [mem_inverse_relation] at hpair -- 展開反關係的刻畫
+    rcases hpair with ⟨a1, b1, hpair1, hpair2⟩ -- 得到 (a1, b1) ∈ R 且 (a, b) = (b1, a1)
+    -- 比對有序對的分量以統一變數
+    have b_eq_b1 : b = b1 := ordered_pair_eq_left hpair2 -- 從 (a, b) = (b1, a1) 得到 b = b1
+    have a_eq_a1 : a = a1 := ordered_pair_eq_right hpair2 -- 從 (a, b) = (b1, a1) 得到 a = a1
+    subst b_eq_b1 a_eq_a1 -- 替換變數
+    rw [mem_range] -- 展開值域的刻畫
+    exact ⟨a, hpair1⟩ -- 使用 (a1, b1) ∈ R（即 (a, b) ∈ R）證明 b ∈ range R
+  · -- 方向2：如果 b ∈ range R，則 b ∈ domain (R⁻¹)
+    intro h_rng -- 假設 b ∈ range R
+    rw [mem_range] at h_rng -- 展開值域的刻畫
+    rcases h_rng with ⟨a, hpair⟩ -- 得到存在 a 使得 (a, b) ∈ R
+    rw [mem_domain] -- 展開定義域的刻畫
+    exists a -- 使用 a 作為證人
+    rw [mem_inverse_relation] -- 展開反關係的刻畫
+    exact ⟨a, b, hpair, rfl⟩ -- 直接構造：因為 (a, b) ∈ R，所以 (b, a) ∈ R⁻¹
 
--- Theorem 2.2.4 (b)：Rng(R⁻¹) = Dom(R)
+-- Theorem 2.2.4 (b)：反關係的值域等於原關係的定義域
+-- 即：Rng(R⁻¹) = Dom(R)
+-- 數學意義：如果 (a, b) ∈ R，則 a 在 R 的定義域中，同時 a 在 R⁻¹ 的值域中
 theorem rng_inv_eq_dom (R: ZFSet) : range (R⁻¹) = domain R := by
-  apply ZFSet.ext
-  intro a
-  constructor
-  · intro h_rng
-    rw [mem_range] at h_rng
-    rcases h_rng with ⟨b, hpair⟩
-    rw [mem_inverse_relation] at hpair
-    rw [mem_domain]
-    rcases hpair with ⟨a1, b1, hpair1, hpair2⟩
-    have a_eq_a1 : a = a1 := ordered_pair_eq_right hpair2
-    have b_eq_b1 : b = b1 := ordered_pair_eq_left hpair2
-    subst a_eq_a1 b_eq_b1
-    exact ⟨b, hpair1⟩
-  · intro h_dom
-    rw [mem_domain] at h_dom
-    rcases h_dom with ⟨b, hpair⟩
-    rw [mem_range]
-    exists b
-    rw [mem_inverse_relation]
-    exact ⟨a, b, hpair, rfl⟩
+  apply ZFSet.ext -- 使用外延性公理，證明兩個集合相等
+  intro a -- 對任意元素 a
+  constructor -- 將 ↔ 分成兩個方向
+  · -- 方向1：如果 a ∈ range (R⁻¹)，則 a ∈ domain R
+    intro h_rng -- 假設 a ∈ range (R⁻¹)
+    rw [mem_range] at h_rng -- 展開值域的刻畫
+    rcases h_rng with ⟨b, hpair⟩ -- 得到存在 b 使得 (b, a) ∈ R⁻¹
+    rw [mem_inverse_relation] at hpair -- 展開反關係的刻畫
+    rw [mem_domain] -- 展開定義域的刻畫
+    rcases hpair with ⟨a1, b1, hpair1, hpair2⟩ -- 得到 (a1, b1) ∈ R 且 (b, a) = (b1, a1)
+    -- 比對有序對的分量以統一變數
+    have a_eq_a1 : a = a1 := ordered_pair_eq_right hpair2 -- 從 (b, a) = (b1, a1) 得到 a = a1
+    have b_eq_b1 : b = b1 := ordered_pair_eq_left hpair2 -- 從 (b, a) = (b1, a1) 得到 b = b1
+    subst a_eq_a1 b_eq_b1 -- 替換變數
+    exact ⟨b, hpair1⟩ -- 使用 (a1, b1) ∈ R（即 (a, b) ∈ R）證明 a ∈ domain R
+  · -- 方向2：如果 a ∈ domain R，則 a ∈ range (R⁻¹)
+    intro h_dom -- 假設 a ∈ domain R
+    rw [mem_domain] at h_dom -- 展開定義域的刻畫
+    rcases h_dom with ⟨b, hpair⟩ -- 得到存在 b 使得 (a, b) ∈ R
+    rw [mem_range] -- 展開值域的刻畫
+    exists b -- 使用 b 作為證人
+    rw [mem_inverse_relation] -- 展開反關係的刻畫
+    exact ⟨a, b, hpair, rfl⟩ -- 直接構造：因為 (a, b) ∈ R，所以 (b, a) ∈ R⁻¹
 
 
 
--- Definition：組合關係 (Composition Relation) 定義
+-- ============================================
+-- 組合關係 (Composition Relation) 定義
+-- ============================================
+-- 定義：關係 S 和 R 的組合 S ∘ R 是滿足以下條件的關係：
+-- (a, c) ∈ S ∘ R 當且僅當存在 b 使得 (a, b) ∈ R 且 (b, c) ∈ S
+-- 數學意義：組合關係對應於關係的複合，類似於函數的複合
+-- 注意：這裡的順序是 S ∘ R，表示先應用 R，再應用 S
 def composition_relation (S R : ZFSet) : ZFSet :=
   ZFSet.sep (fun x => ∃ a b c , x = ordered_pair a c ∧ ordered_pair a b ∈ R ∧ ordered_pair b c ∈ S) (product (domain R) (range S))
 infixr:60 " ∘ " => composition_relation -- 定義 ∘ 為 composition_relation 的簡寫
 
+-- 定理：x 屬於組合關係 S ∘ R 當且僅當存在 a, b, c 使得 x = (a, c) 且 (a, b) ∈ R 且 (b, c) ∈ S
+-- 這是組合關係定義的直接刻畫
 theorem mem_composition_relation (S R x : ZFSet) : x ∈ S ∘ R ↔ ∃ a b c, x = ordered_pair a c ∧ ordered_pair a b ∈ R ∧ ordered_pair b c ∈ S := by
-  rw [composition_relation]
-  rw [ZFSet.mem_sep]
-  constructor
-  · intro h
-    exact h.2
-  · intro h_exist
-    rcases h_exist with ⟨a, b, c, h_eq, hpair1, hpair2⟩
-    constructor
-    · rw [mem_product]
-      exists a
+  rw [composition_relation] -- 展開 composition_relation 的定義
+  rw [ZFSet.mem_sep] -- 使用分離公理的成員關係：x ∈ ZFSet.sep P A ↔ x ∈ A ∧ P x
+  constructor -- 將 ↔ 分成兩個方向
+  · intro h -- 左到右：假設 x 在分離集合中
+    exact h.2 -- 直接取出存在性條件
+  · intro h_exist -- 右到左：假設存在 a, b, c 使得 x = (a, c) 且 (a, b) ∈ R 且 (b, c) ∈ S
+    rcases h_exist with ⟨a, b, c, h_eq, hpair1, hpair2⟩ -- 分解存在量詞
+    constructor -- 需要證明兩個條件：1) x 在笛卡爾積中，2) 存在性條件
+    · -- 證明 x ∈ product (domain R) (range S)
+      -- 即證明 (a, c) ∈ (domain R) × (range S)
+      rw [mem_product] -- 展開笛卡爾積的成員關係
+      exists a -- 第一個分量是 a
       constructor
-      · rw [mem_domain]
-        exact ⟨b, hpair1⟩
-      · exists c
+      · -- 證明 a ∈ domain R，即存在 b' 使得 (a, b') ∈ R
+        rw [mem_domain]
+        exact ⟨b, hpair1⟩ -- 使用 b 作為證人
+      · exists c -- 第二個分量是 c
         constructor
-        · rw [mem_range]
-          exact ⟨b, hpair2⟩
-        · exact h_eq
-    · exact ⟨a, b, c, h_eq, hpair1, hpair2⟩
+        · -- 證明 c ∈ range S，即存在 b' 使得 (b', c) ∈ S
+          rw [mem_range]
+          exact ⟨b, hpair2⟩ -- 使用 b 作為證人
+        · exact h_eq -- x = ordered_pair a c
+    · -- 證明存在性條件
+      exact ⟨a, b, c, h_eq, hpair1, hpair2⟩
 
 
 
--- Theorem 3.1.2 (a)：(R⁻¹)⁻¹ = R
-  theorem R_inv_inv_eq_R (R A B : ZFSet)(hR : is_relation R A B) : (R⁻¹)⁻¹ = R := by
-    apply ZFSet.ext
-    intro x
+-- ============================================
+-- 關係運算的基本性質定理
+-- ============================================
+-- Theorem 3.1.2 (a)：反關係的反關係等於原關係
+-- 即：(R⁻¹)⁻¹ = R
+-- 數學意義：對關係取兩次反關係會回到原關係，這與函數的反函數性質類似
+theorem R_inv_inv_eq_R (R A B : ZFSet)(hR : is_relation R A B) : (R⁻¹)⁻¹ = R := by
+  apply ZFSet.ext -- 使用外延性公理，證明兩個集合相等
+  intro x -- 對任意元素 x
+  constructor -- 將 ↔ 分成兩個方向
+  · -- 方向1：如果 x ∈ (R⁻¹)⁻¹，則 x ∈ R
+    intro h_inv_inv -- 假設 x ∈ (R⁻¹)⁻¹
+    rw [mem_inverse_relation] at h_inv_inv -- 展開反關係的刻畫
+    rcases h_inv_inv with ⟨a, b, hpair, h_eq⟩ -- 得到 (a, b) ∈ R⁻¹ 且 x = (b, a)
+    rw [mem_inverse_relation] at hpair -- 再次展開反關係的刻畫
+    rcases hpair with ⟨b1, a1, hpair1, hpair2⟩ -- 得到 (b1, a1) ∈ R 且 (a, b) = (a1, b1)
+    -- 比對有序對的分量以統一變數
+    have a_eq_a1 : a = a1 := ordered_pair_eq_left hpair2 -- 從 (a, b) = (a1, b1) 得到 a = a1
+    have b_eq_b1 : b = b1 := ordered_pair_eq_right hpair2 -- 從 (a, b) = (a1, b1) 得到 b = b1
+    subst a_eq_a1 b_eq_b1 h_eq -- 替換變數，得到 x = (b1, a1) = (b, a)
+    exact hpair1 -- 使用 (b1, a1) ∈ R（即 (b, a) ∈ R）證明 x ∈ R
+  · -- 方向2：如果 x ∈ R，則 x ∈ (R⁻¹)⁻¹
+    intro h_R -- 假設 x ∈ R
+    rw [mem_inverse_relation] -- 展開反關係的刻畫
+    rw [is_relation] at hR -- 使用關係的定義
+    have h_exists : ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b := hR x h_R -- 從關係定義得到 x 是有序對
+    rcases h_exists with ⟨a, ha, b, hb, h_eq⟩ -- 分解存在量詞，得到 x = (a, b)
+    exists b, a -- 使用 (b, a) 作為證人，因為我們要證明 x = (a, b) ∈ (R⁻¹)⁻¹
     constructor
-    · intro h_inv_inv
-      rw [mem_inverse_relation] at h_inv_inv
-      rcases h_inv_inv with ⟨a, b, hpair, h_eq⟩
-      rw [mem_inverse_relation] at hpair
-      rcases hpair with ⟨b1, a1, hpair1, hpair2⟩
-      have a_eq_a1 : a = a1 := ordered_pair_eq_left hpair2
-      have b_eq_b1 : b = b1 := ordered_pair_eq_right hpair2
-      subst a_eq_a1 b_eq_b1 h_eq
-      exact hpair1
-    · intro h_R
+    · -- 證明 (b, a) ∈ R⁻¹
+      -- 根據反關係的定義，需要證明存在 c, d 使得 (c, d) ∈ R 且 (b, a) = (d, c)
       rw [mem_inverse_relation]
-      rw [is_relation] at hR
-      have h_exists : ∃ a ∈ A, ∃ b ∈ B, x = ordered_pair a b := hR x h_R
-      rcases h_exists with ⟨a, ha, b, hb, h_eq⟩
-      exists b, a
+      exists a, b -- 使用 (a, b) 作為證人，因為 (a, b) ∈ R
       constructor
-      · rw [mem_inverse_relation]
-        exists a, b
-        constructor
-        · subst h_eq
-          exact h_R
-        · rfl
-      · exact h_eq
+      · -- 證明 (a, b) ∈ R
+        subst h_eq -- 將 x 替換為 (a, b)，因為 x = (a, b)
+        exact h_R -- 這是我們的假設
+      · rfl -- 證明 (b, a) = (b, a)，這是顯然的
+    · -- 證明 x = (a, b)
+      -- 注意：根據定義，x ∈ (R⁻¹)⁻¹ 當且僅當存在 c, d 使得 (c, d) ∈ R⁻¹ 且 x = (d, c)
+      -- 我們已經證明了 (b, a) ∈ R⁻¹，所以需要證明 x = (a, b) = (a, b)
+      -- 但實際上，我們需要的是 x = (a, b)，而我們已經有 h_eq : x = (a, b)
+      exact h_eq -- 直接使用假設
 
 
 
 
--- Theorem 3.1.2 (b)：T∘(S∘R) = (T∘S)∘R
+-- Theorem 3.1.2 (b)：組合關係的結合律
+-- 即：T ∘ (S ∘ R) = (T ∘ S) ∘ R
+-- 數學意義：關係的組合運算滿足結合律，這與函數的複合類似
+-- 證明策略：使用外延性公理，證明兩個集合包含相同的元素
 theorem Comp_Associative_Law (T S R: ZFSet):
   composition_relation T (composition_relation S R) = composition_relation (composition_relation T S) R := by
-  apply ZFSet.ext -- 使用外延性公理，將 composition_relation T (composition_relation S R A C B) A D C = composition_relation (composition_relation T S B D C) R A D B 轉換為 ∀ y, y ∈ composition_relation T (composition_relation S R A C B) A D C ↔ y ∈ composition_relation (composition_relation T S B D C) R A D B
-  intro x
-  constructor
-  · intro hl_comp
-    rw [mem_composition_relation] at hl_comp -- 展開 composition_relation 的定義：composition_relation R S A C B = ZFSet.sep (fun x => ∃ a ∈ A, ∃ c ∈ C, x = ordered_pair a c ∧ ∃ b ∈ B, ordered_pair a b ∈ R ∧ ordered_pair b c ∈ S) (product A C)
+  apply ZFSet.ext -- 使用外延性公理，將集合相等轉換為元素成員關係的等價
+  intro x -- 對任意元素 x
+  constructor -- 將 ↔ 分成兩個方向
+  · -- 方向1：如果 x ∈ T ∘ (S ∘ R)，則 x ∈ (T ∘ S) ∘ R
+    intro hl_comp -- 假設 x ∈ T ∘ (S ∘ R)
+    rw [mem_composition_relation] at hl_comp -- 展開組合關係的刻畫
+    -- 得到：存在 a, c, d 使得 x = (a, d) 且 (a, c) ∈ S ∘ R 且 (c, d) ∈ T
     rcases hl_comp with ⟨a, c, d, h_eq, hpair1, hpair2⟩
-    rw [mem_composition_relation] at hpair1
+    rw [mem_composition_relation] at hpair1 -- 展開 (a, c) ∈ S ∘ R
+    -- 得到：存在 a1, b, c1 使得 (a, c) = (a1, c1) 且 (a1, b) ∈ R 且 (b, c1) ∈ S
     rcases hpair1 with ⟨a1, b, c1, h_eq1, hpair11, hpair12⟩
-    rw [mem_composition_relation]
-    exists a, b, d
+    rw [mem_composition_relation] -- 目標：證明 x ∈ (T ∘ S) ∘ R
+    exists a, b, d -- 使用 (a, b, d) 作為證人
     constructor
-    · exact h_eq
+    · exact h_eq -- x = (a, d)
     · constructor
-      · have a_eq_a1 : a = a1 := ordered_pair_eq_left h_eq1
-        subst a_eq_a1
-        exact hpair11
-      · rw [mem_composition_relation]
-        exists b, c, d
+      · -- 證明 (a, b) ∈ R
+        have a_eq_a1 : a = a1 := ordered_pair_eq_left h_eq1 -- 從 (a, c) = (a1, c1) 得到 a = a1
+        subst a_eq_a1 -- 替換變數
+        exact hpair11 -- 使用 (a1, b) ∈ R（即 (a, b) ∈ R）
+      · -- 證明 (b, d) ∈ T ∘ S
+        rw [mem_composition_relation]
+        exists b, c, d -- 使用 (b, c, d) 作為證人
         constructor
-        · rfl
-        · have c_eq_c1 : c = c1 := ordered_pair_eq_right h_eq1
-          subst c_eq_c1
-          exact ⟨hpair12, hpair2⟩
-  · intro hr_comp
-    rw [mem_composition_relation] at hr_comp
+        · rfl -- (b, d) = (b, d)
+        · constructor
+          · -- 證明 (b, c) ∈ S
+            have c_eq_c1 : c = c1 := ordered_pair_eq_right h_eq1 -- 從 (a, c) = (a1, c1) 得到 c = c1
+            subst c_eq_c1 -- 替換變數
+            exact hpair12 -- 使用 (b, c1) ∈ S（即 (b, c) ∈ S）
+          · -- 證明 (c, d) ∈ T
+            exact hpair2 -- 直接使用假設
+  · -- 方向2：如果 x ∈ (T ∘ S) ∘ R，則 x ∈ T ∘ (S ∘ R)
+    intro hr_comp -- 假設 x ∈ (T ∘ S) ∘ R
+    rw [mem_composition_relation] at hr_comp -- 展開組合關係的刻畫
+    -- 得到：存在 a, b, d 使得 x = (a, d) 且 (a, b) ∈ R 且 (b, d) ∈ T ∘ S
     rcases hr_comp with ⟨a, b, d, h_eq, hpair1, hpair2⟩
-    rw [mem_composition_relation] at hpair2
+    rw [mem_composition_relation] at hpair2 -- 展開 (b, d) ∈ T ∘ S
+    -- 得到：存在 b1, c, d1 使得 (b, d) = (b1, d1) 且 (b1, c) ∈ S 且 (c, d1) ∈ T
     rcases hpair2 with ⟨b1, c, d1, h_eq1, hpair21, hpair22⟩
-    rw [mem_composition_relation]
-    exists a, c, d
+    rw [mem_composition_relation] -- 目標：證明 x ∈ T ∘ (S ∘ R)
+    exists a, c, d -- 使用 (a, c, d) 作為證人
     constructor
-    · exact h_eq
+    · exact h_eq -- x = (a, d)
     · constructor
-      · rw [mem_composition_relation]
-        exists a, b, c
+      · -- 證明 (a, c) ∈ S ∘ R
+        rw [mem_composition_relation]
+        exists a, b, c -- 使用 (a, b, c) 作為證人
         constructor
-        · rfl
-        · have b_eq_b1 : b = b1 := ordered_pair_eq_left h_eq1
-          subst b_eq_b1
-          exact ⟨hpair1, hpair21⟩
-      · have d_eq_d1 : d = d1 := ordered_pair_eq_right h_eq1
-        subst d_eq_d1
-        exact hpair22
+        · rfl -- (a, c) = (a, c)
+        · constructor
+          · -- 證明 (a, b) ∈ R
+            have b_eq_b1 : b = b1 := ordered_pair_eq_left h_eq1 -- 從 (b, d) = (b1, d1) 得到 b = b1
+            subst b_eq_b1 -- 替換變數
+            exact hpair1 -- 使用 (a, b) ∈ R
+          · -- 證明 (b, c) ∈ S
+            have b_eq_b1 : b = b1 := ordered_pair_eq_left h_eq1 -- 從 (b, d) = (b1, d1) 得到 b = b1
+            subst b_eq_b1 -- 替換變數
+            exact hpair21 -- 使用 (b1, c) ∈ S（即 (b, c) ∈ S）
+      · -- 證明 (c, d) ∈ T
+        have d_eq_d1 : d = d1 := ordered_pair_eq_right h_eq1 -- 從 (b, d) = (b1, d1) 得到 d = d1
+        subst d_eq_d1 -- 替換變數
+        exact hpair22 -- 使用 (c, d1) ∈ T（即 (c, d) ∈ T）
 
 
--- Theorem 3.1.2 (c)： I_B ∘ R = R ∘ I_A
+-- Theorem 3.1.2 (c)：恒等關係與關係的組合
+-- 即：I_B ∘ R = R ∘ I_A
+-- 數學意義：恒等關係在關係組合中的作用類似於單位元
+-- 其中 I_A 是集合 A 上的恒等關係，I_B 是集合 B 上的恒等關係
 theorem IB_Comp_R_eq_R_Comp_IA (B A R: ZFSet)(hR: is_relation R A B): identity_relation B ∘ R = R ∘ identity_relation A := by
-  apply ZFSet.ext
-  intro x
-  constructor
-  · intro h_IB_Comp_R
-    rw [mem_composition_relation] at h_IB_Comp_R
+  apply ZFSet.ext -- 使用外延性公理，證明兩個集合相等
+  intro x -- 對任意元素 x
+  constructor -- 將 ↔ 分成兩個方向
+  · -- 方向1：如果 x ∈ I_B ∘ R，則 x ∈ R ∘ I_A
+    intro h_IB_Comp_R -- 假設 x ∈ I_B ∘ R
+    rw [mem_composition_relation] at h_IB_Comp_R -- 展開組合關係的刻畫
+    -- 得到：存在 a, b, b1 使得 x = (a, b1) 且 (a, b) ∈ R 且 (b, b1) ∈ I_B
     rcases h_IB_Comp_R with ⟨a, b, b1, h_eq, hpair1, hpair2⟩
-    rw [mem_composition_relation]
-    rw [mem_identity_relation] at hpair2
+    rw [mem_composition_relation] -- 目標：證明 x ∈ R ∘ I_A
+    rw [mem_identity_relation] at hpair2 -- 展開恒等關係的刻畫
+    -- 得到：存在 b2 ∈ B 使得 (b, b1) = (b2, b2)
     rcases hpair2 with ⟨b2, hb2, hb2_eq⟩
-    have b1_eq_b2 : b1 = b2 := ordered_pair_eq_right hb2_eq
-    subst b1_eq_b2
-    have b_eq_b1 : b = b1 := ordered_pair_eq_left hb2_eq
-    subst b_eq_b1
-    rw [is_relation] at hR
-    subst x
+    -- 比對有序對的分量
+    have b1_eq_b2 : b1 = b2 := ordered_pair_eq_right hb2_eq -- 從 (b, b1) = (b2, b2) 得到 b1 = b2
+    subst b1_eq_b2 -- 替換變數
+    have b_eq_b1 : b = b1 := ordered_pair_eq_left hb2_eq -- 從 (b, b1) = (b2, b2) 得到 b = b1
+    subst b_eq_b1 -- 替換變數，現在 b = b1 = b2
+    rw [is_relation] at hR -- 使用關係的定義
+    subst x -- 將 x 替換為 (a, b)
+    -- 從 (a, b) ∈ R 和 is_relation 得到 a ∈ A, b ∈ B
     have h_exists : ∃ a1 ∈ A, ∃ b1 ∈ B, ordered_pair a b = ordered_pair a1 b1 := hR (ordered_pair a b) hpair1
     rcases h_exists with ⟨a1, ha1, b1, hb1, h_eq1⟩
-    have a_eq_a1 : a = a1 := ordered_pair_eq_left h_eq1
-    subst a_eq_a1
-    exists a, a, b
+    have a_eq_a1 : a = a1 := ordered_pair_eq_left h_eq1 -- 從 (a, b) = (a1, b1) 得到 a = a1
+    subst a_eq_a1 -- 替換變數
+    exists a, a, b -- 使用 (a, a, b) 作為證人，因為我們要證明 (a, b) ∈ R ∘ I_A
     constructor
-    · rfl
+    · rfl -- (a, b) = (a, b)
     · constructor
-      · rw [mem_identity_relation]
-        exists a
-      · exact hpair1
-  · intro h_R_Comp_IA
-    rw [mem_composition_relation] at h_R_Comp_IA
+      · -- 證明 (a, a) ∈ I_A
+        rw [mem_identity_relation]
+        exact ⟨a, ha1, rfl⟩ -- 使用 a 作為證人，a ∈ A，且 (a, a) = (a, a)
+      · -- 證明 (a, b) ∈ R
+        exact hpair1 -- 直接使用假設
+  · -- 方向2：如果 x ∈ R ∘ I_A，則 x ∈ I_B ∘ R
+    intro h_R_Comp_IA -- 假設 x ∈ R ∘ I_A
+    rw [mem_composition_relation] at h_R_Comp_IA -- 展開組合關係的刻畫
+    -- 得到：存在 a, a1, b 使得 x = (a, b) 且 (a, a1) ∈ I_A 且 (a1, b) ∈ R
     rcases h_R_Comp_IA with ⟨a, a1, b, h_eq, hpair1, hpair2⟩
-    rw [mem_composition_relation]
-    exists a, b, b
-    rw [mem_identity_relation] at hpair1
+    rw [mem_composition_relation] -- 目標：證明 x ∈ I_B ∘ R
+    exists a, b, b -- 使用 (a, b, b) 作為證人，因為我們要證明 (a, b) ∈ I_B ∘ R
+    rw [mem_identity_relation] at hpair1 -- 展開恒等關係的刻畫
+    -- 得到：存在 a2 ∈ A 使得 (a, a1) = (a2, a2)
     rcases hpair1 with ⟨a2, ha2, ha2_eq⟩
-    have a1_eq_a2 : a1 = a2 := ordered_pair_eq_right ha2_eq
-    subst a1_eq_a2
-    have a_eq_a1 : a = a1 := ordered_pair_eq_left ha2_eq
-    subst a_eq_a1
+    -- 比對有序對的分量
+    have a1_eq_a2 : a1 = a2 := ordered_pair_eq_right ha2_eq -- 從 (a, a1) = (a2, a2) 得到 a1 = a2
+    subst a1_eq_a2 -- 替換變數
+    have a_eq_a1 : a = a1 := ordered_pair_eq_left ha2_eq -- 從 (a, a1) = (a2, a2) 得到 a = a1
+    subst a_eq_a1 -- 替換變數，現在 a = a1 = a2
     constructor
-    · exact h_eq
+    · exact h_eq -- x = (a, b)
     · constructor
-      · exact hpair2
-      · rw [mem_identity_relation]
+      · -- 證明 (a, b) ∈ R
+        exact hpair2 -- 直接使用假設（因為 a = a1，所以 (a1, b) ∈ R 即 (a, b) ∈ R）
+      · -- 證明 (b, b) ∈ I_B
+        rw [mem_identity_relation]
+        -- 需要證明 b ∈ B
         have hbB : b ∈ B := by
-          rw [is_relation] at hR
+          rw [is_relation] at hR -- 使用關係的定義
+          -- 從 (a, b) ∈ R 和 is_relation 得到 b ∈ B
           have h_exists : ∃ a1 ∈ A, ∃ b1 ∈ B, ordered_pair a b = ordered_pair a1 b1 := hR (ordered_pair a b) hpair2
           rcases h_exists with ⟨a1, ha1, b1, hb1, h_eq1⟩
-          have b_eq_b1 : b = b1 := ordered_pair_eq_right h_eq1
-          subst b_eq_b1
-          exact hb1
-        exists b
+          have b_eq_b1 : b = b1 := ordered_pair_eq_right h_eq1 -- 從 (a, b) = (a1, b1) 得到 b = b1
+          subst b_eq_b1 -- 替換變數
+          exact hb1 -- 使用 b1 ∈ B（即 b ∈ B）
+        exact ⟨b, hbB, rfl⟩ -- 使用 b 作為證人，b ∈ B，且 (b, b) = (b, b)
+
+
+-- Theorem 3.1.2 (d)：組合關係的反關係等於反關係的組合（順序相反）
+-- 即：(S ∘ R)⁻¹ = R⁻¹ ∘ S⁻¹
+-- 數學意義：關係組合的反關係等於反關係的逆序組合
+-- 這類似於函數複合的反函數性質：(f ∘ g)⁻¹ = g⁻¹ ∘ f⁻¹
+theorem inv_comp_eq_inv_comp_inv (S R : ZFSet) : (S ∘ R)⁻¹ = R⁻¹ ∘ S⁻¹ := by
+  apply ZFSet.ext -- 使用外延性公理，證明兩個集合相等
+  intro x -- 對任意元素 x
+  constructor -- 將 ↔ 分成兩個方向
+  · -- 方向1：如果 x ∈ (S ∘ R)⁻¹，則 x ∈ R⁻¹ ∘ S⁻¹
+    intro h -- 假設 x ∈ (S ∘ R)⁻¹
+    rw [mem_inverse_relation] at h -- 展開反關係的刻畫
+    -- 得到：存在 a, c 使得 (a, c) ∈ S ∘ R 且 x = (c, a)
+    rcases h with ⟨a, c, h_comp, h_eq_x⟩
+    rw [mem_composition_relation] at h_comp -- 展開組合關係的刻畫
+    -- 得到：存在 a1, b, c1 使得 (a, c) = (a1, c1) 且 (a1, b) ∈ R 且 (b, c1) ∈ S
+    rcases h_comp with ⟨a1, b, c1, h_eq_ac, h_ab, h_bc⟩
+    -- 比對有序對的分量以統一變數
+    have a_eq : a = a1 := ordered_pair_eq_left h_eq_ac -- 從 (a, c) = (a1, c1) 得到 a = a1
+    have c_eq : c = c1 := ordered_pair_eq_right h_eq_ac -- 從 (a, c) = (a1, c1) 得到 c = c1
+    subst a_eq c_eq -- 替換變數
+    subst h_eq_x -- 將 x 替換為 (c, a)，即 x = (c1, a1)
+    rw [mem_composition_relation] -- 目標：證明 (c, a) ∈ R⁻¹ ∘ S⁻¹
+    exists c, b, a -- 使用 (c, b, a) 作為證人
+    constructor
+    · rfl -- (c, a) = (c, a)
+    · constructor
+      · -- 證明 (c, b) ∈ S⁻¹
+        -- 因為 (b, c) ∈ S，所以 (c, b) ∈ S⁻¹
+        rw [mem_inverse_relation]
+        exact ⟨b, c, h_bc, rfl⟩ -- 使用 (b, c) 作為證人，(b, c) ∈ S，且 (c, b) = (c, b)
+      · -- 證明 (b, a) ∈ R⁻¹
+        -- 因為 (a, b) ∈ R，所以 (b, a) ∈ R⁻¹
+        rw [mem_inverse_relation]
+        exact ⟨a, b, h_ab, rfl⟩ -- 使用 (a, b) 作為證人，(a, b) ∈ R，且 (b, a) = (b, a)
+  · -- 方向2：如果 x ∈ R⁻¹ ∘ S⁻¹，則 x ∈ (S ∘ R)⁻¹
+    intro h -- 假設 x ∈ R⁻¹ ∘ S⁻¹
+    rw [mem_composition_relation] at h -- 展開組合關係的刻畫
+    -- 得到：存在 c, b, a 使得 x = (c, a) 且 (c, b) ∈ S⁻¹ 且 (b, a) ∈ R⁻¹
+    rcases h with ⟨c, b, a, h_eq_x, h_cb, h_ba⟩
+    rw [mem_inverse_relation] at h_cb -- 展開反關係的刻畫
+    -- 得到：存在 b1, c1 使得 (b1, c1) ∈ S 且 (c, b) = (c1, b1)
+    rcases h_cb with ⟨b1, c1, h_bc, h_eq_cb⟩
+    -- 比對有序對的分量
+    have b_eq1 : b = b1 := ordered_pair_eq_right h_eq_cb -- 從 (c, b) = (c1, b1) 得到 b = b1
+    have c_eq1 : c = c1 := ordered_pair_eq_left h_eq_cb -- 從 (c, b) = (c1, b1) 得到 c = c1
+    subst b_eq1 c_eq1 -- 替換變數
+    rw [mem_inverse_relation] at h_ba -- 展開反關係的刻畫
+    -- 得到：存在 a1, b2 使得 (a1, b2) ∈ R 且 (b, a) = (b2, a1)
+    rcases h_ba with ⟨a1, b2, h_ab, h_eq_ba⟩
+    -- 比對有序對的分量
+    have b_eq2 : b = b2 := ordered_pair_eq_left h_eq_ba -- 從 (b, a) = (b2, a1) 得到 b = b2
+    have a_eq1 : a = a1 := ordered_pair_eq_right h_eq_ba -- 從 (b, a) = (b2, a1) 得到 a = a1
+    subst b_eq2 a_eq1 -- 替換變數
+    subst h_eq_x -- 將 x 替換為 (c, a)，即 x = (c1, a1)
+    rw [mem_inverse_relation] -- 目標：證明 (c, a) ∈ (S ∘ R)⁻¹
+    -- 根據反關係的定義，需要證明存在 a', b' 使得 (a', b') ∈ S ∘ R 且 (c, a) = (b', a')
+    -- 我們使用 a 作為 a'，c 作為 b'
+    refine ⟨a, c, ?_, rfl⟩
+    -- 證明 (a, c) ∈ S ∘ R
+    rw [mem_composition_relation]
+    refine ⟨a, b, c, rfl, h_ab, h_bc⟩
