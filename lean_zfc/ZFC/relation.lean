@@ -515,14 +515,46 @@ theorem IB_Comp_R_eq_R_Comp_IA (B A R: ZFSet)(hR: is_relation R A B): identity_r
     rw [mem_composition_relation] at h_IB_Comp_R
     rcases h_IB_Comp_R with ⟨a, b, b1, h_eq, hpair1, hpair2⟩
     rw [mem_composition_relation]
-    exists a, b, b1
+    rw [mem_identity_relation] at hpair2
+    rcases hpair2 with ⟨b2, hb2, hb2_eq⟩
+    have b1_eq_b2 : b1 = b2 := ordered_pair_eq_right hb2_eq
+    subst b1_eq_b2
+    have b_eq_b1 : b = b1 := ordered_pair_eq_left hb2_eq
+    subst b_eq_b1
+    rw [is_relation] at hR
+    subst x
+    have h_exists : ∃ a1 ∈ A, ∃ b1 ∈ B, ordered_pair a b = ordered_pair a1 b1 := hR (ordered_pair a b) hpair1
+    rcases h_exists with ⟨a1, ha1, b1, hb1, h_eq1⟩
+    have a_eq_a1 : a = a1 := ordered_pair_eq_left h_eq1
+    subst a_eq_a1
+    exists a, a, b
+    constructor
+    · rfl
+    · constructor
+      · rw [mem_identity_relation]
+        exists a
+      · exact hpair1
+  · intro h_R_Comp_IA
+    rw [mem_composition_relation] at h_R_Comp_IA
+    rcases h_R_Comp_IA with ⟨a, a1, b, h_eq, hpair1, hpair2⟩
+    rw [mem_composition_relation]
+    exists a, b, b
+    rw [mem_identity_relation] at hpair1
+    rcases hpair1 with ⟨a2, ha2, ha2_eq⟩
+    have a1_eq_a2 : a1 = a2 := ordered_pair_eq_right ha2_eq
+    subst a1_eq_a2
+    have a_eq_a1 : a = a1 := ordered_pair_eq_left ha2_eq
+    subst a_eq_a1
     constructor
     · exact h_eq
     · constructor
+      · exact hpair2
       · rw [mem_identity_relation]
-        rw [is_relation] at hR
-        have h_exists : ∃ a_1 ∈ A, ∃ b_1 ∈ B, ordered_pair a_1 b_1 = ordered_pair a b := hR a b hpair1
-        rcases h_exists with ⟨a1, ha1, b1, hb1, h_eq1⟩
-        exists a
-        have a1_eq_a : a1 = a := ordered_pair_eq_left h_eq1
-        subst
+        have hbB : b ∈ B := by
+          rw [is_relation] at hR
+          have h_exists : ∃ a1 ∈ A, ∃ b1 ∈ B, ordered_pair a b = ordered_pair a1 b1 := hR (ordered_pair a b) hpair2
+          rcases h_exists with ⟨a1, ha1, b1, hb1, h_eq1⟩
+          have b_eq_b1 : b = b1 := ordered_pair_eq_right h_eq1
+          subst b_eq_b1
+          exact hb1
+        exists b
